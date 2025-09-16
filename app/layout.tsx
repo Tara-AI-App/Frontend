@@ -1,12 +1,12 @@
 import type React from "react"
 import { ThemeProvider } from "@/components/theme-provider"
-import { AppNavbar } from "@/components/app-navbar"
+import { ConditionalNavbar } from "@/components/conditional-navbar"
 import "./globals.css"
 
 export default function RootLayout({
   children,
 }: {
-  children: React.ReactNode
+  readonly children: React.ReactNode
 }) {
   return (
     <html lang="en">
@@ -26,7 +26,7 @@ export default function RootLayout({
       <body>
         <ThemeProvider attribute="class" defaultTheme="light" enableSystem disableTransitionOnChange>
           <div className="min-h-screen flex flex-col">
-            <AppNavbar />
+            <ConditionalNavbar />
             <main className="flex-1">{children}</main>
           </div>
         </ThemeProvider>

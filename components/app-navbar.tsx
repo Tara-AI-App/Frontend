@@ -1,15 +1,16 @@
 "use client"
 
-import { MessageSquare, BookOpen, User, Sparkles, Menu, LogIn, LogOut } from "lucide-react"
+import { MessageSquare, BookOpen, User, Sparkles, Menu, LogIn, LogOut, Settings } from "lucide-react"
 import Link from "next/link"
 import { usePathname } from "next/navigation"
-import { useState } from "react"
+import { useState, useEffect, useRef } from "react"
 
 import { Button } from "@/components/ui/button"
 import { Sheet, SheetContent, SheetTrigger } from "@/components/ui/sheet"
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar"
 import { Badge } from "@/components/ui/badge"
 import { cn } from "@/lib/utils"
+import { useAuth } from "@/contexts/AuthContext"
 
 const menuItems = [
   {
@@ -29,18 +30,287 @@ const menuItems = [
   },
 ]
 
-// Mock user data - in a real app, this would come from authentication context
-const userData = {
-  fullName: "Sarah Chen",
-  title: "Senior Software Engineer",
-  team: "Data Science Engineering - Growth Team",
-  avatar: "/images/profile-avatar.png",
-  isAuthenticated: true, // This would come from auth context
-}
-
 export function AppNavbar() {
   const pathname = usePathname()
   const [isOpen, setIsOpen] = useState(false)
+  const [showUserDropdown, setShowUserDropdown] = useState(false)
+  const { user, isAuthenticated, isLoading, logout } = useAuth()
+  const userDropdownRef = useRef<HTMLDivElement>(null)
+
+  // Helper function to render user section
+  const renderUserSection = () => {
+    if (isLoading) {
+      return (
+        <div className="flex items-center gap-2">
+          <div className="h-8 w-16 bg-muted animate-pulse rounded"></div>
+          <div className="h-8 w-16 bg-muted animate-pulse rounded"></div>
+        </div>
+      )
+    }
+    
+    if (isAuthenticated && user) {
+      return (
+        <div className="relative" ref={userDropdownRef}>
+          <div className="flex items-center gap-3">
+            <div className="text-right">
+              <p className="text-sm font-medium">{user.name}</p>
+              <p className="text-xs text-muted-foreground">{user.email}</p>
+            </div>
+            {user.country && (
+              <Badge variant="outline" className="text-xs">
+                {user.country}
+              </Badge>
+            )}
+            <Avatar 
+              className="h-8 w-8 cursor-pointer hover:opacity-80 transition-opacity"
+              onClick={() => setShowUserDropdown(!showUserDropdown)}
+            >
+              <AvatarImage 
+                src="/placeholder.svg" 
+                alt={user.name}
+                onError={(e) => {
+                  e.currentTarget.style.display = 'none'
+                }}
+              />
+              <AvatarFallback className="bg-primary text-primary-foreground text-sm">
+                {user.name
+                  .split(" ")
+                  .map((n) => n[0])
+                  .join("")}
+              </AvatarFallback>
+            </Avatar>
+          </div>
+          
+          {/* User Dropdown Menu */}
+          {showUserDropdown && (
+            <div className="absolute top-12 right-0 z-50 w-48 bg-background border border-border rounded-md shadow-lg">
+              <div className="py-1">
+                <Link
+                  href="/profile"
+                  onClick={() => setShowUserDropdown(false)}
+                  className="flex items-center gap-2 w-full px-4 py-2 text-sm text-foreground hover:bg-accent hover:text-accent-foreground"
+                >
+                  <User className="h-4 w-4" />
+                  Profile
+                </Link>
+                <button
+                  onClick={() => {
+                    setShowUserDropdown(false)
+                    // Add settings functionality here
+                  }}
+                  className="flex items-center gap-2 w-full px-4 py-2 text-sm text-foreground hover:bg-accent hover:text-accent-foreground"
+                >
+                  <Settings className="h-4 w-4" />
+                  Settings
+                </button>
+                <button
+                  onClick={(e) => {
+                    e.preventDefault()
+                    e.stopPropagation()
+                    handleLogout()
+                  }}
+                  className="flex items-center gap-2 w-full px-4 py-2 text-sm text-destructive hover:bg-destructive/10"
+                >
+                  <LogOut className="h-4 w-4" />
+                  Sign out
+                </button>
+              </div>
+            </div>
+          )}
+        </div>
+      )
+    }
+    
+    return (
+      <div className="flex items-center gap-2">
+        <Link href="/login">
+          <Button variant="ghost" size="sm">
+            <LogIn className="h-4 w-4 mr-2" />
+            Sign in
+          </Button>
+        </Link>
+        <Link href="/signup">
+          <Button size="sm">
+            Sign up
+          </Button>
+        </Link>
+      </div>
+    )
+  }
+
+  // Helper function to render medium screen user section
+  const renderMediumScreenUserSection = () => {
+    if (isLoading) {
+      return <div className="h-8 w-8 bg-muted animate-pulse rounded"></div>
+    }
+    
+    if (isAuthenticated && user) {
+      return (
+        <div className="relative" ref={userDropdownRef}>
+          <Avatar 
+            className="h-8 w-8 cursor-pointer hover:opacity-80 transition-opacity"
+            onClick={() => setShowUserDropdown(!showUserDropdown)}
+          >
+            <AvatarImage 
+              src="/placeholder.svg" 
+              alt={user.name}
+              onError={(e) => {
+                e.currentTarget.style.display = 'none'
+              }}
+            />
+            <AvatarFallback className="bg-primary text-primary-foreground text-sm">
+              {user.name
+                .split(" ")
+                .map((n) => n[0])
+                .join("")}
+            </AvatarFallback>
+          </Avatar>
+          
+          {/* User Dropdown Menu */}
+          {showUserDropdown && (
+            <div className="absolute top-10 right-0 z-50 w-48 bg-background border border-border rounded-md shadow-lg">
+              <div className="py-1">
+                <Link
+                  href="/profile"
+                  onClick={() => setShowUserDropdown(false)}
+                  className="flex items-center gap-2 w-full px-4 py-2 text-sm text-foreground hover:bg-accent hover:text-accent-foreground"
+                >
+                  <User className="h-4 w-4" />
+                  Profile
+                </Link>
+                <button
+                  onClick={() => {
+                    setShowUserDropdown(false)
+                    // Add settings functionality here
+                  }}
+                  className="flex items-center gap-2 w-full px-4 py-2 text-sm text-foreground hover:bg-accent hover:text-accent-foreground"
+                >
+                  <Settings className="h-4 w-4" />
+                  Settings
+                </button>
+                <button
+                  onClick={(e) => {
+                    e.preventDefault()
+                    e.stopPropagation()
+                    handleLogout()
+                  }}
+                  className="flex items-center gap-2 w-full px-4 py-2 text-sm text-destructive hover:bg-destructive/10"
+                >
+                  <LogOut className="h-4 w-4" />
+                  Sign out
+                </button>
+              </div>
+            </div>
+          )}
+        </div>
+      )
+    }
+    
+    return (
+      <Link href="/login">
+        <Button variant="ghost" size="sm">
+          <LogIn className="h-4 w-4" />
+        </Button>
+      </Link>
+    )
+  }
+
+  // Helper function to render mobile user section
+  const renderMobileUserSection = () => {
+    if (isLoading) {
+      return (
+        <div className="flex flex-col gap-2 px-2 pb-4 border-b">
+          <div className="h-10 w-full bg-muted animate-pulse rounded"></div>
+          <div className="h-10 w-full bg-muted animate-pulse rounded"></div>
+        </div>
+      )
+    }
+    
+    if (isAuthenticated && user) {
+      return (
+        <div className="flex items-center gap-3 px-2 pb-4 border-b">
+          <Avatar className="h-10 w-10">
+            <AvatarImage 
+              src="/placeholder.svg" 
+              alt={user.name}
+              onError={(e) => {
+                e.currentTarget.style.display = 'none'
+              }}
+            />
+            <AvatarFallback className="bg-primary text-primary-foreground">
+              {user.name
+                .split(" ")
+                .map((n) => n[0])
+                .join("")}
+            </AvatarFallback>
+          </Avatar>
+          <div className="flex-1 min-w-0">
+            <p className="font-medium truncate">{user.name}</p>
+            <p className="text-sm text-muted-foreground truncate">{user.email}</p>
+            {user.country && (
+              <Badge variant="outline" className="text-xs mt-1">
+                {user.country}
+              </Badge>
+            )}
+          </div>
+        </div>
+      )
+    }
+    
+    return (
+      <div className="flex flex-col gap-2 px-2 pb-4 border-b">
+        <Link href="/login" onClick={() => setIsOpen(false)}>
+          <Button variant="outline" className="w-full justify-start">
+            <LogIn className="h-4 w-4 mr-2" />
+            Sign in
+          </Button>
+        </Link>
+        <Link href="/signup" onClick={() => setIsOpen(false)}>
+          <Button className="w-full justify-start">
+            Sign up
+          </Button>
+        </Link>
+      </div>
+    )
+  }
+
+  const handleLogout = () => {
+    // Close dropdown immediately
+    setShowUserDropdown(false)
+    setIsOpen(false)
+    
+    try {
+      logout()
+      // Use window.location.href directly for immediate redirect
+      window.location.href = '/login'
+    } catch (error) {
+      console.error('Logout error:', error)
+      // Still redirect even if there's an error
+      window.location.href = '/login'
+    }
+  }
+
+
+  // Close dropdown when clicking outside
+  useEffect(() => {
+    const handleClickOutside = (event: MouseEvent) => {
+      if (userDropdownRef.current && !userDropdownRef.current.contains(event.target as Node)) {
+        setShowUserDropdown(false)
+      }
+    }
+
+    if (showUserDropdown) {
+      // Use a small delay to ensure click events are processed first
+      const timeoutId = setTimeout(() => {
+        document.addEventListener('click', handleClickOutside)
+      }, 100)
+      
+      return () => {
+        clearTimeout(timeoutId)
+        document.removeEventListener('click', handleClickOutside)
+      }
+    }
+  }, [showUserDropdown])
 
   return (
     <nav className="border-b bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60">
@@ -74,61 +344,12 @@ export function AppNavbar() {
 
         {/* User Profile Section or Login Button */}
         <div className="hidden lg:flex items-center gap-3 ml-auto">
-          {userData.isAuthenticated ? (
-            <>
-              <div className="text-right">
-                <p className="text-sm font-medium">{userData.fullName}</p>
-                <p className="text-xs text-muted-foreground">{userData.title}</p>
-              </div>
-              <Badge variant="outline" className="text-xs">
-                {userData.team}
-              </Badge>
-              <Avatar className="h-8 w-8">
-                <AvatarImage src={userData.avatar || "/placeholder.svg"} alt={userData.fullName} />
-                <AvatarFallback className="bg-primary text-primary-foreground text-sm">
-                  {userData.fullName
-                    .split(" ")
-                    .map((n) => n[0])
-                    .join("")}
-                </AvatarFallback>
-              </Avatar>
-            </>
-          ) : (
-            <div className="flex items-center gap-2">
-              <Link href="/login">
-                <Button variant="ghost" size="sm">
-                  <LogIn className="h-4 w-4 mr-2" />
-                  Sign in
-                </Button>
-              </Link>
-              <Link href="/signup">
-                <Button size="sm">
-                  Sign up
-                </Button>
-              </Link>
-            </div>
-          )}
+          {renderUserSection()}
         </div>
 
         {/* Status Indicator for medium screens */}
         <div className="hidden md:flex lg:hidden items-center gap-2 ml-auto">
-          {userData.isAuthenticated ? (
-            <Avatar className="h-8 w-8">
-              <AvatarImage src={userData.avatar || "/placeholder.svg"} alt={userData.fullName} />
-              <AvatarFallback className="bg-primary text-primary-foreground text-sm">
-                {userData.fullName
-                  .split(" ")
-                  .map((n) => n[0])
-                  .join("")}
-              </AvatarFallback>
-            </Avatar>
-          ) : (
-            <Link href="/login">
-              <Button variant="ghost" size="sm">
-                <LogIn className="h-4 w-4" />
-              </Button>
-            </Link>
-          )}
+          {renderMediumScreenUserSection()}
         </div>
 
         {/* Mobile Menu */}
@@ -143,40 +364,7 @@ export function AppNavbar() {
             <SheetContent side="right" className="w-80">
               <div className="flex flex-col gap-4 mt-6">
                 {/* User Profile in Mobile */}
-                {userData.isAuthenticated ? (
-                  <div className="flex items-center gap-3 px-2 pb-4 border-b">
-                    <Avatar className="h-10 w-10">
-                      <AvatarImage src={userData.avatar || "/placeholder.svg"} alt={userData.fullName} />
-                      <AvatarFallback className="bg-primary text-primary-foreground">
-                        {userData.fullName
-                          .split(" ")
-                          .map((n) => n[0])
-                          .join("")}
-                      </AvatarFallback>
-                    </Avatar>
-                    <div className="flex-1 min-w-0">
-                      <p className="font-medium truncate">{userData.fullName}</p>
-                      <p className="text-sm text-muted-foreground truncate">{userData.title}</p>
-                      <Badge variant="outline" className="text-xs mt-1">
-                        {userData.team}
-                      </Badge>
-                    </div>
-                  </div>
-                ) : (
-                  <div className="flex flex-col gap-2 px-2 pb-4 border-b">
-                    <Link href="/login" onClick={() => setIsOpen(false)}>
-                      <Button variant="outline" className="w-full justify-start">
-                        <LogIn className="h-4 w-4 mr-2" />
-                        Sign in
-                      </Button>
-                    </Link>
-                    <Link href="/signup" onClick={() => setIsOpen(false)}>
-                      <Button className="w-full justify-start">
-                        Sign up
-                      </Button>
-                    </Link>
-                  </div>
-                )}
+                {renderMobileUserSection()}
 
                 <div className="flex items-center gap-3 px-2">
                   <div className="flex h-10 w-10 items-center justify-center rounded-lg bg-primary text-primary-foreground">
@@ -205,12 +393,12 @@ export function AppNavbar() {
                   ))}
                   
                   {/* Logout option for authenticated users */}
-                  {userData.isAuthenticated && (
+                  {!isLoading && isAuthenticated && (
                     <button
-                      onClick={() => {
-                        // Logout functionality - replace with actual logout implementation
-                        console.log("Logout clicked")
-                        setIsOpen(false)
+                      onClick={(e) => {
+                        e.preventDefault()
+                        e.stopPropagation()
+                        handleLogout()
                       }}
                       className="flex items-center gap-3 px-4 py-3 rounded-md text-base font-medium transition-colors hover:bg-accent hover:text-accent-foreground text-muted-foreground"
                     >

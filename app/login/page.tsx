@@ -8,44 +8,44 @@ import { Sparkles, Eye, EyeOff, Mail, Lock } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
+import { useAuth } from "@/contexts/AuthContext"
 
 export default function LoginPage() {
   const [email, setEmail] = useState("")
   const [password, setPassword] = useState("")
   const [showPassword, setShowPassword] = useState(false)
-  const [isLoading, setIsLoading] = useState(false)
   const [error, setError] = useState("")
   const router = useRouter()
+  const { login, isLoading } = useAuth()
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
-    setIsLoading(true)
     setError("")
 
     // Basic validation
     if (!email || !password) {
       setError("Please fill in all fields")
-      setIsLoading(false)
       return
     }
 
     if (!email.includes("@")) {
       setError("Please enter a valid email address")
-      setIsLoading(false)
       return
     }
 
     try {
-      // Simulate API call - replace with actual API call when backend is ready
-      await new Promise(resolve => setTimeout(resolve, 1000))
+      // Call the login function from auth context
+      await login(email, password)
       
-      // For now, just redirect to home page
+      // Redirect to home page on successful login
       router.push("/")
     } catch (err) {
       console.error("Login error:", err)
-      setError("Login failed. Please check your credentials and try again.")
-    } finally {
-      setIsLoading(false)
+      if (err instanceof Error) {
+        setError(err.message)
+      } else {
+        setError("Login failed. Please check your credentials and try again.")
+      }
     }
   }
 

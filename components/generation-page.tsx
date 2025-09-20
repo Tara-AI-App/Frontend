@@ -64,7 +64,7 @@ function GenerationContent() {
           } else {
             // Generation complete, redirect to content
             setTimeout(() => {
-              const contentId = Math.random().toString(36).substr(2, 9)
+              const contentId = crypto.randomUUID().substring(0, 9)
               router.push(`/${type}/${contentId}?topic=${encodeURIComponent(topic)}`)
             }, 1000)
           }

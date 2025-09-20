@@ -71,7 +71,7 @@ export function AskTaraPage() {
     if (files) {
       Array.from(files).forEach((file) => {
         const newFile: UploadedFile = {
-          id: Date.now().toString() + Math.random(),
+          id: `file-${crypto.randomUUID()}`,
           name: file.name,
           type: "pdf",
           size: `${(file.size / 1024 / 1024).toFixed(1)} MB`,
@@ -84,7 +84,7 @@ export function AskTaraPage() {
   const handleAddLink = () => {
     if (linkUrl.trim()) {
       const newLink: UploadedFile = {
-        id: Date.now().toString() + Math.random(),
+        id: `link-${crypto.randomUUID()}`,
         name: linkUrl,
         type: "link",
         url: linkUrl,
@@ -102,7 +102,7 @@ export function AskTaraPage() {
     if (!message.trim() || !selectedType) return
 
     const newMessage = {
-      id: Date.now().toString(),
+      id: crypto.randomUUID(),
       content: message,
       isUser: true,
       timestamp: new Date(),
@@ -115,7 +115,7 @@ export function AskTaraPage() {
       const filesContext =
         uploadedFiles.length > 0 ? ` I'll also analyze the ${uploadedFiles.length} file(s) you've uploaded.` : ""
       const aiResponse = {
-        id: (Date.now() + 1).toString(),
+        id: crypto.randomUUID(),
         content: `I'll help you create a ${selectedType} about "${message}". Let me analyze your company's codebase, documentation, and best practices to generate comprehensive content.${filesContext}`,
         isUser: false,
         timestamp: new Date(),

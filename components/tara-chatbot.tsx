@@ -1,6 +1,6 @@
 "use client"
 
-import { useState } from "react"
+import { useState, useEffect } from "react"
 import { Send, Sparkles, MessageCircle, X, Minimize2, Maximize2 } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
@@ -16,27 +16,36 @@ interface ChatMessage {
 }
 
 interface TaraChatbotProps {
-  context?: string // Course or guide context
+  readonly context?: string // Course or guide context
 }
 
 export function TaraChatbot({ context = "course" }: TaraChatbotProps) {
   const [isOpen, setIsOpen] = useState(false)
   const [isMinimized, setIsMinimized] = useState(false)
   const [message, setMessage] = useState("")
-  const [messages, setMessages] = useState<ChatMessage[]>([
-    {
-      id: "1",
-      content: `Hi! I'm Tara, your AI learning assistant. I'm here to help you with any questions about this ${context}. Feel free to ask me anything!`,
-      isUser: false,
-      timestamp: new Date(),
-    },
-  ])
+  const [messages, setMessages] = useState<ChatMessage[]>([])
+  const [hasInitialized, setHasInitialized] = useState(false)
+
+  // Initialize messages after component mounts to avoid hydration mismatch
+  useEffect(() => {
+    if (!hasInitialized) {
+      setMessages([
+        {
+          id: "1",
+          content: `Hi! I'm Tara, your AI learning assistant. I'm here to help you with any questions about this ${context}. Feel free to ask me anything!`,
+          isUser: false,
+          timestamp: new Date(),
+        },
+      ])
+      setHasInitialized(true)
+    }
+  }, [context, hasInitialized])
 
   const handleSendMessage = () => {
     if (!message.trim()) return
 
     const newMessage: ChatMessage = {
-      id: Date.now().toString(),
+      id: crypto.randomUUID(),
       content: message,
       isUser: true,
       timestamp: new Date(),
@@ -47,7 +56,7 @@ export function TaraChatbot({ context = "course" }: TaraChatbotProps) {
     // Simulate AI response
     setTimeout(() => {
       const aiResponse: ChatMessage = {
-        id: (Date.now() + 1).toString(),
+        id: crypto.randomUUID(),
         content: getAIResponse(message, context),
         isUser: false,
         timestamp: new Date(),
@@ -147,7 +156,7 @@ export function TaraChatbot({ context = "course" }: TaraChatbotProps) {
                   >
                     <p>{msg.content}</p>
                     <p className={`mt-1 text-xs opacity-70`}>
-                      {msg.timestamp.toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" })}
+                      {msg.timestamp.toLocaleTimeString("en-US", { hour: "2-digit", minute: "2-digit" })}
                     </p>
                   </div>
                 </div>
@@ -161,7 +170,7 @@ export function TaraChatbot({ context = "course" }: TaraChatbotProps) {
                 placeholder="Ask about this content..."
                 value={message}
                 onChange={(e) => setMessage(e.target.value)}
-                onKeyPress={(e) => e.key === "Enter" && handleSendMessage()}
+                onKeyDown={(e) => e.key === "Enter" && handleSendMessage()}
                 className="text-xs"
                 size="sm"
               />

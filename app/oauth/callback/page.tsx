@@ -1,6 +1,6 @@
 "use client"
 
-import { useEffect, useState } from 'react'
+import { useEffect, useState, useRef } from 'react'
 import { useRouter, useSearchParams } from 'next/navigation'
 import { apiService } from '@/lib/api'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
@@ -13,9 +13,15 @@ export default function OAuthCallbackPage() {
   const [status, setStatus] = useState<'loading' | 'success' | 'error'>('loading')
   const [errorMessage, setErrorMessage] = useState('')
   const [provider, setProvider] = useState<string>('')
+  const hasProcessedRef = useRef(false)
 
   useEffect(() => {
     const handleOAuthCallback = async () => {
+      // Prevent double execution using ref
+      if (hasProcessedRef.current) {
+        return
+      }
+
       try {
         const code = searchParams.get('code')
         const state = searchParams.get('state')
@@ -24,14 +30,19 @@ export default function OAuthCallbackPage() {
         if (error) {
           setStatus('error')
           setErrorMessage(`OAuth error: ${error}`)
+          hasProcessedRef.current = true
           return
         }
 
         if (!code) {
           setStatus('error')
           setErrorMessage('No authorization code received')
+          hasProcessedRef.current = true
           return
         }
+
+        // Mark as processing to prevent double execution
+        hasProcessedRef.current = true
 
         // Determine provider from state or URL
         const currentPath = window.location.pathname

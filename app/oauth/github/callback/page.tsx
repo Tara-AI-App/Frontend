@@ -1,6 +1,6 @@
 "use client"
 
-import { useEffect, useState } from 'react'
+import { useEffect, useState, useRef } from 'react'
 import { useRouter, useSearchParams } from 'next/navigation'
 import { apiService } from '@/lib/api'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
@@ -12,9 +12,15 @@ export default function GitHubOAuthCallbackPage() {
   const searchParams = useSearchParams()
   const [status, setStatus] = useState<'loading' | 'saving' | 'success' | 'error'>('loading')
   const [errorMessage, setErrorMessage] = useState('')
+  const hasProcessedRef = useRef(false)
 
   useEffect(() => {
     const handleGitHubCallback = async () => {
+      // Prevent double execution using ref
+      if (hasProcessedRef.current) {
+        return
+      }
+
       try {
         const code = searchParams.get('code')
         const state = searchParams.get('state')
@@ -23,14 +29,19 @@ export default function GitHubOAuthCallbackPage() {
         if (error) {
           setStatus('error')
           setErrorMessage(`GitHub OAuth error: ${error}`)
+          hasProcessedRef.current = true
           return
         }
 
         if (!code) {
           setStatus('error')
           setErrorMessage('No authorization code received from GitHub')
+          hasProcessedRef.current = true
           return
         }
+
+        // Mark as processing to prevent double execution
+        hasProcessedRef.current = true
 
         // Exchange code for token using backend
         const response = await fetch(`${process.env.NEXT_PUBLIC_API_URL || 'http://localhost:9000/api/v1'}/oauth/github/callback?code=${code}&state=${state || ''}`, {

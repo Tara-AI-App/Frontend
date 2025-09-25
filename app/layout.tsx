@@ -25,7 +25,7 @@ export default function RootLayout({
           }
         `}</style>
       </head>
-      <body>
+      <body suppressHydrationWarning>
         <ThemeProvider attribute="class" defaultTheme="light" enableSystem disableTransitionOnChange>
           <AuthProvider>
             <RouteGuard>

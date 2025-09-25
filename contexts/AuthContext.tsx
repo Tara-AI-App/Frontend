@@ -31,15 +31,24 @@ export function AuthProvider({ children }: { readonly children: React.ReactNode 
   useEffect(() => {
     // Check if user is already logged in on mount
     const checkAuth = async () => {
+      console.log('=== AUTH CHECK DEBUG ===')
+      console.log('Is authenticated:', apiService.isAuthenticated())
+      console.log('Token exists:', !!apiService.getToken())
+      
       if (apiService.isAuthenticated()) {
         try {
+          console.log('Attempting to get current user...')
           const userData = await apiService.getCurrentUser()
+          console.log('User data received:', userData)
           setUser(userData)
         } catch (error) {
           // Token is invalid, remove it
           console.warn('Token validation failed:', error)
+          console.warn('Removing invalid token')
           apiService.removeToken()
         }
+      } else {
+        console.log('No authentication token found')
       }
       setIsLoading(false)
     }

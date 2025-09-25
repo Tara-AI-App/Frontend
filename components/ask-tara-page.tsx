@@ -2,7 +2,7 @@
 
 import type React from "react"
 
-import { useState } from "react"
+import { useState, useEffect } from "react"
 import { Send, Sparkles, Upload, Github, Globe, HardDrive, Link, FileText, X } from 'lucide-react'
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
@@ -11,6 +11,8 @@ import { ContentTypeSelector } from "@/components/content-type-selector"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Badge } from "@/components/ui/badge"
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
+import { apiService, OAuthTokenResponse } from "@/lib/api"
+import { useAuth } from "@/contexts/AuthContext"
 
 interface UploadedFile {
   id: string
@@ -22,13 +24,14 @@ interface UploadedFile {
 
 interface Integration {
   id: string
-  type: "github" | "drive" | "url"
+  type: "github" | "drive"
   name: string
   description: string
   connected: boolean
 }
 
 export function AskTaraPage() {
+  const { isAuthenticated, isLoading: authLoading } = useAuth()
   const [message, setMessage] = useState("")
   const [selectedType, setSelectedType] = useState<"course" | "guide" | null>(null)
   const [uploadedFiles, setUploadedFiles] = useState<UploadedFile[]>([])
@@ -41,28 +44,63 @@ export function AskTaraPage() {
       timestamp: Date
     }>
   >([])
+  const [oauthTokens, setOauthTokens] = useState<OAuthTokenResponse[]>([])
+  const [integrationsLoading, setIntegrationsLoading] = useState(true)
+  const [connectingProvider, setConnectingProvider] = useState<string | null>(null)
 
+  // Fetch OAuth tokens when user is authenticated
+  useEffect(() => {
+    const fetchOAuthTokens = async () => {
+      // Only fetch if user is authenticated and not loading
+      if (!isAuthenticated || authLoading) {
+        setIntegrationsLoading(false)
+        return
+      }
+
+      try {
+        setIntegrationsLoading(true)
+        
+        // First test basic API connection
+        const basicConnection = await apiService.testBasicConnection()
+        if (!basicConnection) {
+          throw new Error('Cannot connect to API server - basic connection failed')
+        }
+        
+        // Then test authenticated API connection
+        try {
+          await apiService.testConnection()
+        } catch (healthError) {
+          throw new Error('Cannot connect to API server - authentication failed')
+        }
+        
+        // Then fetch OAuth tokens
+        const response = await apiService.getOAuthTokens(['github', 'drive'])
+        setOauthTokens(response.tokens)
+      } catch (error) {
+        setOauthTokens([])
+      } finally {
+        setIntegrationsLoading(false)
+      }
+    }
+
+    fetchOAuthTokens()
+  }, [isAuthenticated, authLoading])
+
+  // Create integrations array with dynamic connection status
   const integrations: Integration[] = [
     {
       id: "github",
       type: "github",
       name: "GitHub Repository",
       description: "Connect your GitHub repositories for code analysis",
-      connected: true,
+      connected: oauthTokens.some(token => token.provider === 'github'),
     },
     {
       id: "drive",
       type: "drive",
       name: "Google Drive",
       description: "Access documents and files from Google Drive",
-      connected: true,
-    },
-    {
-      id: "url",
-      type: "url",
-      name: "Web URLs",
-      description: "Add web pages and documentation links",
-      connected: false,
+      connected: oauthTokens.some(token => token.provider === 'drive'),
     },
   ]
 
@@ -246,22 +284,75 @@ export function AskTaraPage() {
                   </CardTitle>
                 </CardHeader>
                 <CardContent className="space-y-3">
-                  {integrations.map((integration) => (
-                    <div key={integration.id} className="flex items-center justify-between p-3 border rounded-lg">
-                      <div className="flex items-center gap-3">
-                        {integration.type === "github" && <Github className="h-5 w-5" />}
-                        {integration.type === "drive" && <HardDrive className="h-5 w-5" />}
-                        {integration.type === "url" && <Globe className="h-5 w-5" />}
-                        <div>
-                          <p className="font-medium text-sm">{integration.name}</p>
-                          <p className="text-xs text-muted-foreground">{integration.description}</p>
-                        </div>
+                  {authLoading ? (
+                    <div className="flex items-center justify-center p-4">
+                      <div className="flex items-center gap-2 text-sm text-muted-foreground">
+                        <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-primary"></div>
+                        Authenticating...
                       </div>
-                      <Badge variant={integration.connected ? "default" : "secondary"}>
-                        {integration.connected ? "Connected" : "Connect"}
-                      </Badge>
                     </div>
-                  ))}
+                  ) : !isAuthenticated ? (
+                    <div className="flex items-center justify-center p-4">
+                      <div className="text-sm text-muted-foreground">
+                        Please log in to view integrations
+                      </div>
+                    </div>
+                  ) : integrationsLoading ? (
+                    <div className="flex items-center justify-center p-4">
+                      <div className="flex items-center gap-2 text-sm text-muted-foreground">
+                        <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-primary"></div>
+                        Loading integrations...
+                      </div>
+                    </div>
+                  ) : (
+                    integrations.map((integration) => (
+                      <div key={integration.id} className="flex items-center justify-between p-3 border rounded-lg">
+                        <div className="flex items-center gap-3">
+                          {integration.type === "github" && <Github className="h-5 w-5" />}
+                          {integration.type === "drive" && <HardDrive className="h-5 w-5" />}
+                          <div>
+                            <p className="font-medium text-sm">{integration.name}</p>
+                            <p className="text-xs text-muted-foreground">{integration.description}</p>
+                          </div>
+                        </div>
+                        <Button
+                          variant={integration.connected ? "default" : "outline"}
+                          size="sm"
+                          disabled={integration.connected || connectingProvider === integration.type}
+                          onClick={async () => {
+                            if (!integration.connected) {
+                              try {
+                                setConnectingProvider(integration.type)
+                                if (integration.type === "github") {
+                                  // Get GitHub auth URL from backend
+                                  const response = await apiService.getGitHubAuthUrl()
+                                  // Redirect to GitHub OAuth
+                                  window.location.href = response.auth_url
+                                } else if (integration.type === "drive") {
+                                  // TODO: Implement Google Drive OAuth
+                                  console.log("Google Drive OAuth not implemented yet")
+                                }
+                              } catch (error) {
+                                console.error("Failed to initiate OAuth:", error)
+                                setConnectingProvider(null)
+                                // You could show a toast notification here
+                              }
+                            }
+                          }}
+                          className={integration.connected ? "cursor-not-allowed opacity-60" : "cursor-pointer"}
+                        >
+                          {connectingProvider === integration.type ? (
+                            <>
+                              <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-current mr-2"></div>
+                              Connecting...
+                            </>
+                          ) : (
+                            integration.connected ? "Connected" : "Connect"
+                          )}
+                        </Button>
+                      </div>
+                    ))
+                  )}
                 </CardContent>
               </Card>
             </div>

@@ -157,6 +157,27 @@ class ApiService {
     })
   }
 
+  async getGoogleDriveAuthUrl(state?: string): Promise<{ auth_url: string }> {
+    const queryParams = state ? `?state=${encodeURIComponent(state)}` : ''
+    return this.request<{ auth_url: string }>(`/oauth/drive/auth-url${queryParams}`)
+  }
+
+  async saveGoogleDriveToken(accessToken: string, refreshToken?: string): Promise<OAuthTokenResponse> {
+    return this.request<OAuthTokenResponse>('/oauth/drive/save-token', {
+      method: 'POST',
+      body: JSON.stringify({ 
+        access_token: accessToken,
+        refresh_token: refreshToken 
+      }),
+    })
+  }
+
+  async refreshGoogleDriveToken(): Promise<{ message: string; access_token: string; expires_at: string }> {
+    return this.request<{ message: string; access_token: string; expires_at: string }>('/oauth/drive/refresh-token', {
+      method: 'POST',
+    })
+  }
+
   // Test method to verify API connection
   async testConnection(): Promise<any> {
     // Use the root health endpoint directly

@@ -1,0 +1,187 @@
+"use client"
+
+import { useEffect, useState, useRef } from 'react'
+import { useRouter, useSearchParams } from 'next/navigation'
+import { apiService } from '@/lib/api'
+import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
+import { Button } from '@/components/ui/button'
+import { CheckCircle, XCircle, Loader2, HardDrive } from 'lucide-react'
+
+export default function GoogleDriveOAuthCallbackPage() {
+  const router = useRouter()
+  const searchParams = useSearchParams()
+  const [status, setStatus] = useState<'loading' | 'saving' | 'success' | 'error'>('loading')
+  const [errorMessage, setErrorMessage] = useState('')
+  const hasProcessedRef = useRef(false)
+
+  useEffect(() => {
+    const handleGoogleDriveCallback = async () => {
+      // Prevent double execution using ref
+      if (hasProcessedRef.current) {
+        return
+      }
+
+      try {
+        const code = searchParams.get('code')
+        const state = searchParams.get('state')
+        const error = searchParams.get('error')
+
+        if (error) {
+          setStatus('error')
+          setErrorMessage(`Google Drive OAuth error: ${error}`)
+          hasProcessedRef.current = true
+          return
+        }
+
+        if (!code) {
+          setStatus('error')
+          setErrorMessage('No authorization code received from Google Drive')
+          hasProcessedRef.current = true
+          return
+        }
+
+        // Mark as processing to prevent double execution
+        hasProcessedRef.current = true
+
+        // Exchange code for token using backend
+        const response = await fetch(`${process.env.NEXT_PUBLIC_API_URL || 'http://localhost:9000/api/v1'}/oauth/drive/callback?code=${code}&state=${state || ''}`, {
+          method: 'GET',
+          headers: {
+            'Content-Type': 'application/json',
+          },
+          credentials: 'include',
+        })
+
+        if (!response.ok) {
+          const errorData = await response.json().catch(() => ({ detail: 'Unknown error' }))
+          throw new Error(errorData.detail || `HTTP error! status: ${response.status}`)
+        }
+
+        const googleResponse = await response.json()
+        
+        // Log the Google response
+        console.log('🔍 Google OAuth Response:', googleResponse)
+        console.log('⏰ Token expires_in:', googleResponse.expires_in)
+        console.log('🔄 Has refresh token:', !!googleResponse.refresh_token)
+        
+        // Update status to show we're saving the token
+        setStatus('saving')
+        
+        // Save the token to our backend (this requires authentication)
+        try {
+          const saveResponse = await apiService.saveGoogleDriveToken(
+            googleResponse.access_token, 
+            googleResponse.refresh_token
+          )
+          console.log('Token saved successfully:', saveResponse)
+          setStatus('success')
+        } catch (saveError) {
+          console.error('Failed to save token:', saveError)
+          throw new Error(`Failed to save Google Drive token: ${saveError instanceof Error ? saveError.message : 'Unknown error'}`)
+        }
+        
+        // Redirect to ask-tara page after 2 seconds
+        setTimeout(() => {
+          router.push('/')
+        }, 2000)
+
+      } catch (error) {
+        console.error('Google Drive OAuth callback error:', error)
+        setStatus('error')
+        setErrorMessage(error instanceof Error ? error.message : 'An unknown error occurred')
+      }
+    }
+
+    handleGoogleDriveCallback()
+  }, [searchParams, router])
+
+  return (
+    <div className="min-h-screen flex items-center justify-center p-4 bg-gradient-to-br from-blue-50 to-indigo-100">
+      <Card className="w-full max-w-md shadow-lg">
+        <CardHeader className="text-center pb-4">
+          <CardTitle className="flex items-center justify-center gap-3">
+            <HardDrive className="h-8 w-8 text-blue-600" />
+            <span className="text-xl">Google Drive Integration</span>
+          </CardTitle>
+        </CardHeader>
+        <CardContent className="text-center space-y-6">
+          {status === 'loading' && (
+            <>
+              <div className="space-y-3">
+                <div className="flex items-center justify-center">
+                  <Loader2 className="h-8 w-8 animate-spin text-blue-600" />
+                </div>
+                <p className="text-gray-600 font-medium">
+                  Connecting your Google Drive account...
+                </p>
+                <p className="text-sm text-gray-500">
+                  Please wait while we set up the integration
+                </p>
+              </div>
+            </>
+          )}
+          
+          {status === 'saving' && (
+            <>
+              <div className="space-y-3">
+                <div className="flex items-center justify-center">
+                  <Loader2 className="h-8 w-8 animate-spin text-green-600" />
+                </div>
+                <p className="text-gray-600 font-medium">
+                  Saving your Google Drive token...
+                </p>
+                <p className="text-sm text-gray-500">
+                  Almost done! Setting up your integration
+                </p>
+              </div>
+            </>
+          )}
+          
+          {status === 'success' && (
+            <>
+              <div className="space-y-3">
+                <div className="flex items-center justify-center">
+                  <CheckCircle className="h-12 w-12 text-green-500" />
+                </div>
+                <p className="text-green-600 font-semibold text-lg">
+                  Successfully Connected!
+                </p>
+                <p className="text-sm text-gray-600">
+                  Your Google Drive account is now integrated with Tara
+                </p>
+                <p className="text-xs text-gray-500">
+                  Redirecting you back to Tara...
+                </p>
+              </div>
+            </>
+          )}
+          
+          {status === 'error' && (
+            <>
+              <div className="space-y-4">
+                <div className="flex items-center justify-center">
+                  <XCircle className="h-12 w-12 text-red-500" />
+                </div>
+                <div className="space-y-2">
+                  <p className="text-red-600 font-semibold text-lg">
+                    Connection Failed
+                  </p>
+                  <p className="text-sm text-gray-600 bg-red-50 p-3 rounded-lg border border-red-200">
+                    {errorMessage}
+                  </p>
+                </div>
+                <Button 
+                  onClick={() => router.push('/')}
+                  variant="outline"
+                  className="w-full"
+                >
+                  Return to Tara
+                </Button>
+              </div>
+            </>
+          )}
+        </CardContent>
+      </Card>
+    </div>
+  )
+}

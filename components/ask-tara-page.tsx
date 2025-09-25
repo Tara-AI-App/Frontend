@@ -329,8 +329,10 @@ export function AskTaraPage() {
                                   // Redirect to GitHub OAuth
                                   window.location.href = response.auth_url
                                 } else if (integration.type === "drive") {
-                                  // TODO: Implement Google Drive OAuth
-                                  console.log("Google Drive OAuth not implemented yet")
+                                  // Get Google Drive auth URL from backend
+                                  const response = await apiService.getGoogleDriveAuthUrl()
+                                  // Redirect to Google Drive OAuth
+                                  window.location.href = response.auth_url
                                 }
                               } catch (error) {
                                 console.error("Failed to initiate OAuth:", error)

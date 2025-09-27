@@ -27,8 +27,7 @@ ENV NEXT_TELEMETRY_DISABLED=1
 
 # Set build-time environment variables
 # These will be embedded in the build
-ARG NEXT_PUBLIC_API_URL
-ENV NEXT_PUBLIC_API_URL=$NEXT_PUBLIC_API_URL
+ENV NEXT_PUBLIC_API_URL=https://api.taraai.tech/api/v1
 
 RUN npm run build
 

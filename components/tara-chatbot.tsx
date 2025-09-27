@@ -172,7 +172,6 @@ export function TaraChatbot({ context = "course" }: TaraChatbotProps) {
                 onChange={(e) => setMessage(e.target.value)}
                 onKeyDown={(e) => e.key === "Enter" && handleSendMessage()}
                 className="text-xs"
-                size="sm"
               />
               <Button onClick={handleSendMessage} disabled={!message.trim()} size="sm" className="px-2">
                 <Send className="h-3 w-3" />

@@ -1,5 +1,6 @@
 import { GuideViewPage } from "@/components/guide-view-page"
 
-export default function GuideViewPageRoute({ params }: { params: { id: string } }) {
-  return <GuideViewPage guideId={params.id} />
+export default async function GuideViewPageRoute({ params }: { params: Promise<{ id: string }> }) {
+  const { id } = await params
+  return <GuideViewPage guideId={id} />
 }

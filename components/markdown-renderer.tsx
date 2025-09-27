@@ -23,7 +23,7 @@ export function MarkdownRenderer({ content, className = "" }: MarkdownRendererPr
     <div className={`prose prose-sm max-w-none ${className}`}>
       <ReactMarkdown
         components={{
-          code({ node, inline, className, children, ...props }) {
+          code({ node, inline, className, children, ...props }: any) {
             const codeString = String(children).replace(/\n$/, "")
             const language = className?.replace("language-", "") || "text"
 

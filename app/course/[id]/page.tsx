@@ -1,5 +1,6 @@
 import { CourseViewPage } from "@/components/course-view-page"
 
-export default function CourseViewPageRoute({ params }: { params: { id: string } }) {
-  return <CourseViewPage courseId={params.id} />
+export default async function CourseViewPageRoute({ params }: { params: Promise<{ id: string }> }) {
+  const { id } = await params
+  return <CourseViewPage courseId={id} />
 }

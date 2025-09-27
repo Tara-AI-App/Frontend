@@ -1,0 +1,37 @@
+# Dependencies
+node_modules
+
+# Next.js build output
+.next/
+out/
+
+# Environment variables
+.env*
+
+# OS generated files
+.DS_Store
+Thumbs.db
+
+# Git
+.git
+
+# Docker
+Dockerfile
+.dockerignore
+
+# Logs
+*.log
+
+# Temporary files
+tmp/
+temp/
+
+# CI/CD
+.github/
+
+# Package manager lock files (keep package-lock.json for npm)
+yarn.lock
+pnpm-lock.yaml
+
+# Vercel
+.vercel

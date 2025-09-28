@@ -1,6 +1,6 @@
-import { CourseViewPage } from "@/components/course-view-page"
+import { CourseDetailPage } from "@/components/course-detail-page"
 
 export default async function CourseViewPageRoute({ params }: { params: Promise<{ id: string }> }) {
   const { id } = await params
-  return <CourseViewPage courseId={id} />
+  return <CourseDetailPage courseId={id} />
 }

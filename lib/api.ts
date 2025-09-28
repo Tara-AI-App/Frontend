@@ -55,6 +55,41 @@ export interface CourseListResponse {
   total: number
 }
 
+export interface LessonDetail {
+  id: string
+  title: string
+  content: string
+  index: number
+  is_completed: boolean
+  created_at: string
+  updated_at: string
+}
+
+export interface ModuleDetail {
+  id: string
+  title: string
+  order_index: number
+  is_completed: boolean
+  created_at: string
+  updated_at: string
+  lessons: LessonDetail[]
+}
+
+export interface CourseDetail {
+  id: string
+  title: string
+  description?: string
+  estimated_duration?: number
+  difficulty?: string
+  learning_objectives?: string[]
+  source_from?: string[]
+  progress: number
+  is_completed: boolean
+  created_at: string
+  updated_at: string
+  modules: ModuleDetail[]
+}
+
 class ApiService {
   private readonly baseURL: string
 
@@ -200,6 +235,10 @@ class ApiService {
   // Course methods
   async getCourses(): Promise<CourseListResponse> {
     return this.request<CourseListResponse>('/course')
+  }
+
+  async getCourseById(courseId: string): Promise<CourseDetail> {
+    return this.request<CourseDetail>(`/course/${courseId}`)
   }
 
   // Test method to verify API connection

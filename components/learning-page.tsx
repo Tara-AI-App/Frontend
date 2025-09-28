@@ -37,14 +37,17 @@ function LearningPageComponent() {
     fetchCourses()
   }, [])
 
-  const formatDuration = (minutes?: number) => {
-    if (!minutes) return "Duration not specified"
-    const hours = Math.floor(minutes / 60)
-    const mins = minutes % 60
-    if (hours > 0) {
-      return `${hours}h ${mins}m`
+  const formatDuration = (hours?: number) => {
+    if (!hours) return "Duration not specified"
+    if (hours >= 1) {
+      const wholeHours = Math.floor(hours)
+      const remainingMinutes = Math.round((hours - wholeHours) * 60)
+      if (remainingMinutes > 0) {
+        return `${wholeHours}h ${remainingMinutes}m`
+      }
+      return `${wholeHours}h`
     }
-    return `${mins}m`
+    return `${hours.toFixed(1)}h`
   }
 
   const getStatusBadge = (course: CourseListItem) => {

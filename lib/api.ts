@@ -241,6 +241,19 @@ class ApiService {
     return this.request<CourseDetail>(`/course/${courseId}`)
   }
 
+  // AI Course Generation
+  async generateCourse(request: {
+    token_github: string
+    token_drive: string
+    prompt: string
+    files_url?: string
+  }): Promise<{ course_id: string }> {
+    return this.request<{ course_id: string }>('/ai/course/generate', {
+      method: 'POST',
+      body: JSON.stringify(request),
+    })
+  }
+
   // Test method to verify API connection
   async testConnection(): Promise<any> {
     // Use the root health endpoint directly

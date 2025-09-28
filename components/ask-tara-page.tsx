@@ -47,6 +47,7 @@ export function AskTaraPage() {
   const [oauthTokens, setOauthTokens] = useState<OAuthTokenResponse[]>([])
   const [integrationsLoading, setIntegrationsLoading] = useState(true)
   const [connectingProvider, setConnectingProvider] = useState<string | null>(null)
+  const [isProcessing, setIsProcessing] = useState(false)
 
   // Fetch OAuth tokens when user is authenticated
   useEffect(() => {
@@ -136,8 +137,11 @@ export function AskTaraPage() {
     setUploadedFiles((prev) => prev.filter((file) => file.id !== id))
   }
 
-  const handleSendMessage = () => {
-    if (!message.trim() || !selectedType) return
+  const handleSendMessage = async () => {
+    if (!message.trim() || !selectedType || isProcessing) return
+
+    console.log("🚀 Starting message processing...")
+    setIsProcessing(true)
 
     const newMessage = {
       id: crypto.randomUUID(),
@@ -148,24 +152,36 @@ export function AskTaraPage() {
 
     setMessages((prev) => [...prev, newMessage])
 
-    // Simulate AI response with generation process
-    setTimeout(() => {
-      const filesContext =
-        uploadedFiles.length > 0 ? ` I'll also analyze the ${uploadedFiles.length} file(s) you've uploaded.` : ""
-      const aiResponse = {
-        id: crypto.randomUUID(),
-        content: `I'll help you create a ${selectedType} about "${message}". Let me analyze your company's codebase, documentation, and best practices to generate comprehensive content.${filesContext}`,
-        isUser: false,
-        timestamp: new Date(),
-      }
-      setMessages((prev) => [...prev, aiResponse])
+    // Show AI response immediately
+    const filesContext =
+      uploadedFiles.length > 0 ? ` I'll also analyze the ${uploadedFiles.length} file(s) you've uploaded.` : ""
+    const aiResponse = {
+      id: crypto.randomUUID(),
+      content: `I'll help you create a ${selectedType} about "${message}". Let me analyze your company's codebase, documentation, and best practices to generate comprehensive content.${filesContext}`,
+      isUser: false,
+      timestamp: new Date(),
+    }
+    setMessages((prev) => [...prev, aiResponse])
 
-      // Redirect to generation page after a short delay
-      setTimeout(() => {
-        const encodedMessage = encodeURIComponent(message)
-        window.location.href = `/generate?type=${selectedType}&topic=${encodedMessage}`
-      }, 2000)
-    }, 1000)
+    // Redirect to generation page for both courses and guides
+    setTimeout(() => {
+      console.log("🔄 Redirecting to generation page...")
+      const encodedMessage = encodeURIComponent(message)
+      const encodedFiles = uploadedFiles.length > 0 ? encodeURIComponent(JSON.stringify(uploadedFiles)) : ""
+      const githubToken = oauthTokens.find(token => token.provider === 'github')?.access_token || ""
+      const driveToken = oauthTokens.find(token => token.provider === 'drive')?.access_token || ""
+      
+      // Pass all necessary data to the generation page
+      const params = new URLSearchParams({
+        type: selectedType,
+        topic: encodedMessage,
+        github_token: githubToken,
+        drive_token: driveToken,
+        ...(encodedFiles && { files: encodedFiles })
+      })
+      
+      window.location.href = `/generate?${params.toString()}`
+    }, 2000)
 
     setMessage("")
     setSelectedType(null)
@@ -402,11 +418,20 @@ export function AskTaraPage() {
             />
             <Button
               onClick={handleSendMessage}
-              disabled={!message.trim() || !selectedType}
+              disabled={!message.trim() || !selectedType || isProcessing}
               className="px-4 md:px-6 w-full sm:w-auto"
             >
-              <Send className="h-4 w-4 mr-2 sm:mr-0" />
-              <span className="sm:hidden">Send</span>
+              {isProcessing ? (
+                <>
+                  <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-current mr-2 sm:mr-0" />
+                  <span className="sm:hidden">Processing...</span>
+                </>
+              ) : (
+                <>
+                  <Send className="h-4 w-4 mr-2 sm:mr-0" />
+                  <span className="sm:hidden">Send</span>
+                </>
+              )}
             </Button>
           </div>
         </div>

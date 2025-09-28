@@ -1,5 +1,5 @@
-import { MyLearningPage } from "@/components/my-learning-page"
+import LearningPageComponent from "@/components/learning-page"
 
 export default function LearningPage() {
-  return <MyLearningPage />
+  return <LearningPageComponent />
 }

@@ -36,8 +36,27 @@ export interface OAuthTokenListResponse {
   providers?: string[]
 }
 
+export interface CourseListItem {
+  id: string
+  title: string
+  description?: string
+  estimated_duration?: number
+  difficulty?: string
+  learning_objectives?: string[]
+  source_from?: string[]
+  progress: number
+  is_completed: boolean
+  created_at: string
+  updated_at: string
+}
+
+export interface CourseListResponse {
+  courses: CourseListItem[]
+  total: number
+}
+
 class ApiService {
-  private baseURL: string
+  private readonly baseURL: string
 
   constructor() {
     this.baseURL = API_BASE_URL
@@ -178,6 +197,11 @@ class ApiService {
     })
   }
 
+  // Course methods
+  async getCourses(): Promise<CourseListResponse> {
+    return this.request<CourseListResponse>('/course')
+  }
+
   // Test method to verify API connection
   async testConnection(): Promise<any> {
     // Use the root health endpoint directly
@@ -208,7 +232,7 @@ class ApiService {
         credentials: 'include', // Include cookies and authorization headers in CORS requests
       })
       return response.ok
-    } catch (error) {
+    } catch {
       return false
     }
   }

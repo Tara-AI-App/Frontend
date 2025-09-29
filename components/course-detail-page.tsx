@@ -537,7 +537,11 @@ export function CourseDetailPage({ courseId }: CourseDetailPageProps) {
                 </div>
                 <div className="flex justify-between text-sm">
                   <span className="text-gray-600">Generated From:</span>
-                  <span className="font-medium">Internal Docs</span>
+                  <span className="font-medium text-right max-w-[60%] break-words">
+                    {course.source_from && course.source_from.length > 0 
+                      ? course.source_from.join(', ') 
+                      : 'Internal Docs'}
+                  </span>
                 </div>
               </CardContent>
             </Card>

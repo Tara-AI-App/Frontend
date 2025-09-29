@@ -300,20 +300,6 @@ function GenerationContent() {
               )}
             </div>
 
-            <div className="bg-primary/10 border border-primary/20 rounded-lg p-4">
-              <div className="flex items-start gap-3">
-                <div className="flex h-6 w-6 items-center justify-center rounded-full bg-primary text-primary-foreground mt-0.5">
-                  <Sparkles className="h-3 w-3" />
-                </div>
-                <div className="text-sm">
-                  <p className="font-medium text-primary mb-1">AI Integration Active</p>
-                  <p className="text-primary/70 text-xs md:text-sm">
-                    Connected to internal repositories, Confluence documentation, and Slack channels for comprehensive
-                    content generation based on Gojek's engineering practices.
-                  </p>
-                </div>
-              </div>
-            </div>
 
             {/* Integration Icons */}
             <div className="flex justify-center items-center gap-6 pt-4">
@@ -324,10 +310,6 @@ function GenerationContent() {
               <div className="flex items-center gap-2 text-sm text-muted-foreground">
                 <HardDrive className="h-5 w-5" />
                 <span className="hidden sm:inline">Drive</span>
-              </div>
-              <div className="flex items-center gap-2 text-sm text-muted-foreground">
-                <Database className="h-5 w-5" />
-                <span className="hidden sm:inline">Confluence</span>
               </div>
             </div>
           </div>

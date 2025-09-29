@@ -169,9 +169,6 @@ function LearningPageComponent() {
                   <p className="text-sm text-muted-foreground mb-4">
                     You don't have any courses yet. Generate some courses to get started!
                   </p>
-                  <Button onClick={() => window.location.href = '/generate'}>
-                    Generate Courses
-                  </Button>
                 </CardContent>
               </Card>
             </div>

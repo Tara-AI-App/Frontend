@@ -2,7 +2,7 @@
 
 import { useState, Suspense } from "react"
 import { useSearchParams, useRouter } from "next/navigation"
-import { BookOpen, Play, CheckCircle, Clock, Users, Star, ChevronRight, ArrowLeft, Download, Share } from "lucide-react"
+import { BookOpen, CheckCircle, Clock, Users, Star, ChevronRight, ArrowLeft, Download, Share } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Badge } from "@/components/ui/badge"
@@ -18,7 +18,6 @@ interface CourseViewPageProps {
 function CourseViewContent({ courseId }: CourseViewPageProps) {
   const searchParams = useSearchParams()
   const router = useRouter()
-  const topic = searchParams.get("topic") || "Real-time Recommendation API for Go-Food"
 
   const [selectedModule, setSelectedModule] = useState(0)
   const [selectedLesson, setSelectedLesson] = useState<number | null>(null)
@@ -329,10 +328,6 @@ func (gw *APIGateway) HandleRideRequest(ctx context.Context, req *RideRequest) (
 
   const courseData = mockCourses[courseId as keyof typeof mockCourses] || mockCourses["1"]
 
-  const handleStartCourse = () => {
-    // Show first lesson content
-    setSelectedLesson(1)
-  }
 
   const handleLessonClick = (moduleIndex: number, lessonId: number) => {
     setSelectedModule(moduleIndex)
@@ -431,15 +426,6 @@ func (gw *APIGateway) HandleRideRequest(ctx context.Context, req *RideRequest) (
                     <Badge variant="secondary">{courseData.difficulty}</Badge>
                   </div>
 
-                  <div className="flex flex-col sm:flex-row gap-3">
-                    <Button onClick={handleStartCourse} className="bg-primary hover:bg-primary/90" size="lg">
-                      <Play className="h-4 w-4 mr-2" />
-                      Start Course
-                    </Button>
-                    <Button variant="outline" size="lg">
-                      Add to Learning Path
-                    </Button>
-                  </div>
                 </div>
 
                 <Separator />

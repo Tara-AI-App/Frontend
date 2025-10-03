@@ -14,9 +14,11 @@ import {
   Github,
   HardDrive,
   AlertCircle,
+  RefreshCw,
 } from "lucide-react"
 import { Card, CardContent } from "@/components/ui/card"
 import { Progress } from "@/components/ui/progress"
+import { Button } from "@/components/ui/button"
 import { apiService } from "@/lib/api"
 
 const generationSteps = [
@@ -93,7 +95,21 @@ function GenerationContent() {
       
     } catch (error) {
       console.error("❌ Failed to generate course:", error)
-      setError(error instanceof Error ? error.message : 'Unknown error occurred')
+      let errorMessage = 'Unknown error occurred'
+      
+      if (error instanceof Error) {
+        if (error.message.includes('Request timeout')) {
+          errorMessage = 'Course generation is taking longer than expected. The AI service may be busy. Please try again in a few minutes.'
+        } else if (error.message.includes('Network error')) {
+          errorMessage = 'Unable to connect to the server. Please check your internet connection and try again.'
+        } else if (error.message.includes('timed out')) {
+          errorMessage = 'The AI service took too long to respond. This can happen with complex course generation. Please try again.'
+        } else {
+          errorMessage = error.message
+        }
+      }
+      
+      setError(errorMessage)
       generationInitiatedRef.current = false // Reset on error to allow retry
     } finally {
       setIsGenerating(false)
@@ -291,7 +307,7 @@ function GenerationContent() {
                     }`}
                   >
                     {generatedCourseId ? "Course generated successfully!" : 
-                     isGenerating ? "Generating course with AI..." :
+                     isGenerating ? "Generating course with AI... (this may take up to 2 minutes)" :
                      error ? "Course generation failed" :
                      "Ready to generate course"}
                   </span>
@@ -300,6 +316,24 @@ function GenerationContent() {
               )}
             </div>
 
+
+            {/* Error Retry Button */}
+            {error && !isGenerating && (
+              <div className="flex justify-center pt-4">
+                <Button 
+                  onClick={() => {
+                    setError(null)
+                    generationInitiatedRef.current = false
+                    generateCourse()
+                  }}
+                  variant="outline"
+                  className="gap-2"
+                >
+                  <RefreshCw className="h-4 w-4" />
+                  Try Again
+                </Button>
+              </div>
+            )}
 
             {/* Integration Icons */}
             <div className="flex justify-center items-center gap-6 pt-4">

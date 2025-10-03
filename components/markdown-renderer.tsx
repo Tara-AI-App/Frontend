@@ -54,6 +54,10 @@ export function MarkdownRenderer({ content, className = "" }: MarkdownRendererPr
               </code>
             )
           },
+          pre: ({ children }) => {
+            // Handle pre elements that might be wrapped in p tags
+            return <>{children}</>
+          },
           h1: ({ children }) => (
             <h1 className="text-2xl font-bold text-foreground mb-4 mt-6 border-b pb-2">{children}</h1>
           ),

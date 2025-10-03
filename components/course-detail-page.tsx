@@ -2,7 +2,7 @@
 
 import { useEffect, useState } from "react"
 import { useRouter } from "next/navigation"
-import { BookOpen, Play, CheckCircle, Clock, Users, ChevronRight, ArrowLeft, AlertCircle } from "lucide-react"
+import { BookOpen, CheckCircle, Clock, Users, ChevronRight, ArrowLeft, AlertCircle } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Badge } from "@/components/ui/badge"
@@ -104,12 +104,6 @@ export function CourseDetailPage({ courseId }: CourseDetailPageProps) {
     setExpandedModules(newExpanded)
   }
 
-  const handleStartCourse = () => {
-    setIsLearningMode(false)
-    setExpandedModules(new Set([0]))
-    setSelectedModule(0)
-    setSelectedLesson(null)
-  }
 
   const getCurrentLesson = () => {
     if (!course || selectedModule >= course.modules.length) return null
@@ -413,23 +407,6 @@ export function CourseDetailPage({ courseId }: CourseDetailPageProps) {
                 </div>
               </div>
 
-              <div className="flex gap-4">
-                <Button
-                  size="lg"
-                  onClick={handleStartCourse}
-                  className="px-6"
-                >
-                  <Play className="h-5 w-5 mr-2" />
-                  Start Course
-                </Button>
-                <Button
-                  variant="outline"
-                  size="lg"
-                  className="px-6"
-                >
-                  Add to Learning Path
-                </Button>
-              </div>
             </div>
           </div>
         </div>

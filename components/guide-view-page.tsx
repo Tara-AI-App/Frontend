@@ -18,7 +18,7 @@ interface GuideViewPageProps {
 function GuideViewContent({ guideId }: GuideViewPageProps) {
   const searchParams = useSearchParams()
   const router = useRouter()
-  const topic = searchParams.get("topic") || "Microservices Deployment with Kubernetes"
+  const topic = decodeURIComponent(searchParams.get("topic") || "Microservices Deployment with Kubernetes")
 
   const [completedSteps, setCompletedSteps] = useState<number[]>([])
 

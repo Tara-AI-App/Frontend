@@ -45,7 +45,7 @@ function GenerationContent() {
   const componentMountCountRef = useRef(0)
 
   const type = searchParams.get("type") || "course"
-  const topic = searchParams.get("topic") || "React Authentication"
+  const topic = decodeURIComponent(searchParams.get("topic") || "React Authentication")
   const githubToken = searchParams.get("github_token") || ""
   const driveToken = searchParams.get("drive_token") || ""
   const filesParam = searchParams.get("files") || ""
@@ -80,7 +80,7 @@ function GenerationContent() {
       const response = await apiService.generateCourse({
         token_github: githubToken,
         token_drive: driveToken,
-        prompt: topic,
+        prompt: topic, // topic is now properly decoded
         files_url: filesUrl
       })
 

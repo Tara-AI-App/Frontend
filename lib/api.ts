@@ -125,7 +125,7 @@ class ApiService {
     try {
       // Add timeout to prevent hanging requests
       const controller = new AbortController()
-      const timeoutId = setTimeout(() => controller.abort(), 60000) // 60 second timeout
+      const timeoutId = setTimeout(() => controller.abort(), 3600000) // 1 hour timeout
       
       const response = await fetch(url, {
         ...config,

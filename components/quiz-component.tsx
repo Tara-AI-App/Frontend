@@ -1,16 +1,15 @@
 "use client"
 
-import { useState } from "react"
-import { CheckCircle, XCircle, Clock, HelpCircle, AlertCircle } from "lucide-react"
+import { useState, useEffect } from "react"
+import { CheckCircle, XCircle, HelpCircle, AlertCircle } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Badge } from "@/components/ui/badge"
-import { Progress } from "@/components/ui/progress"
-import { QuizDetail } from "@/lib/api"
+import { QuizDetail, apiService } from "@/lib/api"
 
 interface QuizComponentProps {
-  quiz: QuizDetail
-  onQuizComplete?: (quizId: string, isCorrect: boolean) => void
+  readonly quiz: QuizDetail
+  readonly onQuizComplete?: (quizId: string, isCorrect: boolean) => void
 }
 
 export function QuizComponent({ quiz, onQuizComplete }: QuizComponentProps) {
@@ -18,6 +17,20 @@ export function QuizComponent({ quiz, onQuizComplete }: QuizComponentProps) {
   const [selectedAnswers, setSelectedAnswers] = useState<{ [questionIndex: number]: string }>({})
   const [showResults, setShowResults] = useState(false)
   const [quizCompleted, setQuizCompleted] = useState(quiz.is_completed)
+  const [checkedAnswers, setCheckedAnswers] = useState<{ [questionIndex: number]: boolean }>({})
+  const [answerFeedback, setAnswerFeedback] = useState<{ [questionIndex: number]: { isCorrect: boolean; message: string } }>({})
+  const [isCompletingQuiz, setIsCompletingQuiz] = useState(false)
+
+  // Reset quiz state when quiz changes
+  useEffect(() => {
+    setCurrentQuestionIndex(0)
+    setSelectedAnswers({})
+    setShowResults(false)
+    setQuizCompleted(quiz.is_completed)
+    setCheckedAnswers({})
+    setAnswerFeedback({})
+    setIsCompletingQuiz(false)
+  }, [quiz.id]) // Reset when quiz ID changes
 
   // Normalize quiz questions - handle both array and single object formats
   const normalizeQuestions = (questions: any) => {
@@ -123,7 +136,6 @@ export function QuizComponent({ quiz, onQuizComplete }: QuizComponentProps) {
   }
 
   const currentQuestion = normalizedQuestions[currentQuestionIndex]
-  const progress = ((currentQuestionIndex + 1) / normalizedQuestions.length) * 100
 
   // Additional validation for current question
   if (!currentQuestion) {
@@ -173,25 +185,114 @@ export function QuizComponent({ quiz, onQuizComplete }: QuizComponentProps) {
       ...prev,
       [currentQuestionIndex]: answer
     }))
+    // Reset checked state when a new answer is selected
+    setCheckedAnswers(prev => ({
+      ...prev,
+      [currentQuestionIndex]: false
+    }))
+    // Clear any existing feedback for this question
+    setAnswerFeedback(prev => {
+      const newFeedback = { ...prev }
+      delete newFeedback[currentQuestionIndex]
+      return newFeedback
+    })
   }
 
-  const handleNextQuestion = () => {
+  // Helper function to check if an answer is correct
+  const isAnswerCorrect = (question: any, selectedAnswer: string) => {
+    const choices = question.choices
+    const correctAnswerText = question.answer
+    
+    // Find the correct choice from the choices array
+    const correctChoice = choices.find((choice: string) => {
+      const choiceLetter = choice.includes(': ') ? choice.split(':')[0].trim() : choice
+      
+      // Check if this choice matches the correct answer
+      if (correctAnswerText.includes(': ')) {
+        // If correct answer is in format "B: To predict...", compare directly
+        return choice === correctAnswerText
+      } else {
+        // If correct answer is just "B", extract letter from choice and compare
+        return choiceLetter === correctAnswerText
+      }
+    })
+    
+    // Check if selected answer matches the correct choice
+    return selectedAnswer === correctChoice
+  }
+
+  const handleCheckAnswer = () => {
+    const selectedAnswer = selectedAnswers[currentQuestionIndex]
+    const question = normalizedQuestions[currentQuestionIndex]
+    
+    if (!selectedAnswer) {
+      alert("Please select an answer first!")
+      return
+    }
+
+    const isCorrect = isAnswerCorrect(question, selectedAnswer)
+    const message = isCorrect ? "Correct! Well done." : "Incorrect. Try again."
+    
+    // Mark this question as checked (even for wrong answers)
+    setCheckedAnswers(prev => ({
+      ...prev,
+      [currentQuestionIndex]: true
+    }))
+    
+    // Set the feedback
+    setAnswerFeedback(prev => ({
+      ...prev,
+      [currentQuestionIndex]: { isCorrect, message }
+    }))
+  }
+
+  const handleNextQuestion = async () => {
+    // Check if current question has been answered and checked
+    const hasAnswered = selectedAnswers[currentQuestionIndex] !== undefined
+    const hasChecked = checkedAnswers[currentQuestionIndex] === true
+    
+    if (!hasAnswered) {
+      alert("Please select an answer first!")
+      return
+    }
+    
+    if (!hasChecked) {
+      alert("Please check your answer first!")
+      return
+    }
+
     if (currentQuestionIndex < normalizedQuestions.length - 1) {
       setCurrentQuestionIndex(prev => prev + 1)
     } else {
-      // Quiz completed
-      setShowResults(true)
-      setQuizCompleted(true)
+      // Quiz completed - call API to mark quiz as completed
+      setIsCompletingQuiz(true)
       
-      // Calculate score
-      const correctAnswers = normalizedQuestions.filter((question, index) => 
-        selectedAnswers[index] === question.answer
-      ).length
-      
-      const isCorrect = correctAnswers === normalizedQuestions.length
-      
-      if (onQuizComplete) {
-        onQuizComplete(quiz.id, isCorrect)
+      try {
+        const completionResponse = await apiService.completeQuiz(quiz.id, true)
+        
+        if (completionResponse.success) {
+          setQuizCompleted(true)
+          
+          // Calculate score
+          const correctAnswers = normalizedQuestions.filter((question, index) => {
+            const selectedAnswer = selectedAnswers[index]
+            return isAnswerCorrect(question, selectedAnswer || '')
+          }).length
+          
+          const isCorrect = correctAnswers === normalizedQuestions.length
+          
+          // Call the callback immediately to navigate to next quiz (skip results page)
+          if (onQuizComplete) {
+            onQuizComplete(quiz.id, isCorrect)
+          }
+        } else {
+          alert('Failed to complete quiz: ' + completionResponse.message)
+        }
+      } catch (error) {
+        console.error('Error completing quiz:', error)
+        alert('Failed to complete quiz. Please try again.')
+      } finally {
+        setIsCompletingQuiz(false)
       }
     }
   }
@@ -207,6 +308,9 @@ export function QuizComponent({ quiz, onQuizComplete }: QuizComponentProps) {
     setSelectedAnswers({})
     setShowResults(false)
     setQuizCompleted(false)
+    setCheckedAnswers({})
+    setAnswerFeedback({})
+    setIsCompletingQuiz(false)
   }
 
   const getAnswerStatus = (questionIndex: number, answer: string) => {
@@ -215,21 +319,15 @@ export function QuizComponent({ quiz, onQuizComplete }: QuizComponentProps) {
     const question = normalizedQuestions[questionIndex]
     const selectedAnswer = selectedAnswers[questionIndex]
     
-    // Extract the actual answer value from the selected answer string
-    let selectedValue = selectedAnswer
-    let correctValue = question.answer
+    // Check if this answer option is the correct one
+    const isThisAnswerCorrect = isAnswerCorrect(question, answer)
     
-    // If choices were in dictionary format, extract the value part for comparison
-    if (selectedAnswer && selectedAnswer.includes(': ')) {
-      selectedValue = selectedAnswer.split(': ')[1]
-    }
-    if (question.answer && question.answer.includes(': ')) {
-      correctValue = question.answer.split(': ')[1]
-    }
+    // Check if user selected the correct answer
+    const isUserAnswerCorrect = isAnswerCorrect(question, selectedAnswer || '')
     
-    if (selectedValue === correctValue || answer === correctValue) {
+    if (isThisAnswerCorrect || (answer === selectedAnswer && isUserAnswerCorrect)) {
       return "correct"
-    } else if (selectedValue === answer && selectedValue !== correctValue) {
+    } else if (answer === selectedAnswer && !isUserAnswerCorrect) {
       return "incorrect"
     }
     return ""
@@ -238,23 +336,12 @@ export function QuizComponent({ quiz, onQuizComplete }: QuizComponentProps) {
   const getScore = () => {
     const correctAnswers = normalizedQuestions.filter((question, index) => {
       const selectedAnswer = selectedAnswers[index]
-      let selectedValue = selectedAnswer
-      let correctValue = question.answer
-      
-      // If choices were in dictionary format, extract the value part for comparison
-      if (selectedAnswer && selectedAnswer.includes(': ')) {
-        selectedValue = selectedAnswer.split(': ')[1]
-      }
-      if (question.answer && question.answer.includes(': ')) {
-        correctValue = question.answer.split(': ')[1]
-      }
-      
-      return selectedValue === correctValue
+      return isAnswerCorrect(question, selectedAnswer || '')
     }).length
     return Math.round((correctAnswers / normalizedQuestions.length) * 100)
   }
 
-  if (quizCompleted && showResults) {
+  if (false && quizCompleted && showResults) {
     const score = getScore()
     const isPassing = score >= 70 // 70% passing grade
     
@@ -291,17 +378,7 @@ export function QuizComponent({ quiz, onQuizComplete }: QuizComponentProps) {
             <div className="text-sm text-gray-600">
               Correct Answers: {normalizedQuestions.filter((question, index) => {
                 const selectedAnswer = selectedAnswers[index]
-                let selectedValue = selectedAnswer
-                let correctValue = question.answer
-                
-                if (selectedAnswer && selectedAnswer.includes(': ')) {
-                  selectedValue = selectedAnswer.split(': ')[1]
-                }
-                if (question.answer && question.answer.includes(': ')) {
-                  correctValue = question.answer.split(': ')[1]
-                }
-                
-                return selectedValue === correctValue
+                return isAnswerCorrect(question, selectedAnswer || '')
               }).length} / {normalizedQuestions.length}
             </div>
             <Progress value={score} className="h-2" />
@@ -358,29 +435,119 @@ export function QuizComponent({ quiz, onQuizComplete }: QuizComponentProps) {
           <HelpCircle className="h-5 w-5" />
           Quiz
         </CardTitle>
-        <div className="flex items-center gap-2 text-sm text-gray-600">
-          <Clock className="h-4 w-4" />
-          Question {currentQuestionIndex + 1} of {normalizedQuestions.length}
-        </div>
-        <Progress value={progress} className="h-2" />
       </CardHeader>
       <CardContent className="space-y-4">
         <div className="space-y-3">
           <h3 className="text-lg font-medium">{currentQuestion.question}</h3>
           <div className="space-y-2">
-            {currentQuestion.choices.map((choice, index) => (
-              <button
-                key={`choice-${currentQuestion.question.slice(0, 10)}-${index}`}
-                onClick={() => handleAnswerSelect(choice)}
-                className={`w-full p-3 text-left rounded-lg border transition-colors ${
-                  selectedAnswers[currentQuestionIndex] === choice
-                    ? "bg-primary text-primary-foreground border-primary"
-                    : "bg-gray-50 hover:bg-gray-100 border-gray-200"
-                }`}
+            {currentQuestion.choices.map((choice, index) => {
+              const feedback = answerFeedback[currentQuestionIndex]
+              const isSelectedAnswer = selectedAnswers[currentQuestionIndex] === choice
+              let choiceClass = "bg-gray-50 hover:bg-gray-gray-100 border-gray-200"
+              
+              // Apply styling based on feedback
+              if (feedback && isSelectedAnswer) {
+                choiceClass = feedback.isCorrect 
+                  ? "bg-green-100 text-green-800 border-green-300" 
+                  : "bg-red-100 text-red-800 border-red-300"
+              } else if (isSelectedAnswer) {
+                choiceClass = "bg-primary text-primary-foreground border-primary"
+              }
+              
+              return (
+                <button
+                  key={`choice-${currentQuestion.question.slice(0, 10)}-${index}`}
+                  onClick={() => handleAnswerSelect(choice)}
+                  className={`w-full p-3 text-left rounded-lg border transition-colors ${choiceClass}`}
+                  disabled={feedback?.isCorrect === false && isSelectedAnswer}
+                >
+                  <div className="flex items-center justify-between">
+                    <span>{choice}</span>
+                    {feedback && isSelectedAnswer && (
+                      <span className="text-lg">
+                        {feedback.isCorrect ? <CheckCircle className="h-5 w-5" /> : <XCircle className="h-5 w-5" />}
+                      </span>
+                    )}
+                  </div>
+                </button>
+              )
+            })}
+          </div>
+          
+          {/* Feedback message */}
+          {answerFeedback[currentQuestionIndex] && (
+            <div className={`p-3 rounded-lg border ${
+              answerFeedback[currentQuestionIndex].isCorrect 
+                ? "bg-green-50 border-green-200 text-green-800" 
+                : "bg-red-50 border-red-200 text-red-800"
+            }`}>
+              {answerFeedback[currentQuestionIndex].message}
+            </div>
+          )}
+          
+          {/* Action buttons */}
+          <div className="flex gap-2 pt-4">
+            <Button
+              onClick={handleCheckAnswer}
+              disabled={!selectedAnswers[currentQuestionIndex]}
+              className="flex-1"
+            >
+              {(() => {
+                const isChecked = checkedAnswers[currentQuestionIndex]
+                const feedback = answerFeedback[currentQuestionIndex]
+                const isWrongAnswer = feedback && !feedback.isCorrect
+                
+                if (!isChecked) {
+                  return "Check Answer"
+                } else if (isWrongAnswer) {
+                  return "Try Again" // Allow retry for wrong answers
+                } else {
+                  return "Answer Checked"
+                }
+              })()}
+            </Button>
+            <div className="flex gap-2">
+              {currentQuestionIndex > 0 && (
+                <Button onClick={handlePreviousQuestion} variant="outline">
+                  Previous
+                </Button>
+              )}
+              <Button 
+                onClick={handleNextQuestion}
+                disabled={(() => {
+                  const isChecked = checkedAnswers[currentQuestionIndex]
+                  const isLastQuestion = currentQuestionIndex >= normalizedQuestions.length - 1
+                  
+                  if (!isChecked || isCompletingQuiz) {
+                    return true // Disabled if not checked or completing
+                  }
+                  
+                  if (isLastQuestion) {
+                    // For Finish Quiz button, check if answer is correct
+                    const feedback = answerFeedback[currentQuestionIndex]
+                    return feedback ? !feedback.isCorrect : true
+                  }
+                  
+                  return false // Next button enabled after checked
+                })()}
+                variant="default"
+                className={(() => {
+                  const isChecked = checkedAnswers[currentQuestionIndex]
+                  const isLastQuestion = currentQuestionIndex >= normalizedQuestions.length - 1
+                  const feedback = answerFeedback[currentQuestionIndex]
+                  
+                  const isDisabled = !isChecked || isCompletingQuiz || (isLastQuestion && feedback && !feedback.isCorrect)
+                  return isDisabled ? "opacity-50 cursor-not-allowed" : ""
+                })()}
               >
-                {choice}
-              </button>
-            ))}
+                {(() => {
+                  if (isCompletingQuiz) {
+                    return "Completing..."
+                  }
+                  return currentQuestionIndex < normalizedQuestions.length - 1 ? "Next" : "Finish Quiz"
+                })()}
+              </Button>
+            </div>
           </div>
         </div>
       </CardContent>

@@ -151,6 +151,35 @@ export function CourseDetailPage({ courseId }: CourseDetailPageProps) {
     return module.quizzes[selectedQuiz]
   }
 
+  const reloadCourseDetails = async () => {
+    try {
+      const courseData = await apiService.getCourseById(courseId)
+      setCourse(courseData)
+      return courseData
+    } catch (error) {
+      console.error("Failed to reload course details:", error)
+      return null
+    }
+  }
+
+  const findNextUnfinishedQuiz = (courseData: CourseDetail | null) => {
+    if (!courseData) return null
+    
+    // Look for unfinished quizzes in order
+    for (let moduleIndex = 0; moduleIndex < courseData.modules.length; moduleIndex++) {
+      const module = courseData.modules[moduleIndex]
+      if (module.quizzes && module.quizzes.length > 0) {
+        for (let quizIndex = 0; quizIndex < module.quizzes.length; quizIndex++) {
+          const quiz = module.quizzes[quizIndex]
+          if (!quiz.is_completed) {
+            return { moduleIndex, quizIndex, quiz }
+          }
+        }
+      }
+    }
+    return null
+  }
+
   const handleLessonCompletion = async (lessonId: string, isCompleted: boolean) => {
     if (!course) return
     
@@ -240,9 +269,49 @@ export function CourseDetailPage({ courseId }: CourseDetailPageProps) {
       return (
         <QuizComponent 
           quiz={currentQuiz} 
-          onQuizComplete={(quizId, isCorrect) => {
+          onQuizComplete={async (quizId, isCorrect) => {
             console.log(`Quiz ${quizId} completed: ${isCorrect ? 'passed' : 'failed'}`)
-            // Quiz completion status will be updated in backend in future implementation
+            
+            // Reload course details to get updated quiz status
+            const updatedCourse = await reloadCourseDetails()
+            
+            if (updatedCourse) {
+              // Check if all quizzes in current module are completed
+              const currentModule = updatedCourse.modules[selectedModule]
+              const allCurrentModuleQuizzesCompleted = currentModule.quizzes?.every((quiz: any) => quiz.is_completed)
+              
+              if (allCurrentModuleQuizzesCompleted && currentModule.quizzes && currentModule.quizzes.length > 0) {
+                // All quizzes in current module completed, go back to modules list
+                setIsLearningMode(false)
+                setSelectedQuiz(null)
+                setSelectedLesson(null)
+              } else {
+                // Find the next unfinished quiz in the same module first
+                const nextQuizInCurrentModule = currentModule.quizzes?.find((quiz: any) => !quiz.is_completed)
+                if (nextQuizInCurrentModule) {
+                  const quizIndex = currentModule.quizzes.findIndex((quiz: any) => quiz.id === nextQuizInCurrentModule.id)
+                  setSelectedQuiz(quizIndex)
+                  setIsLearningMode(true)
+                } else {
+                  // Find the next unfinished quiz across all modules
+                  const nextQuiz = findNextUnfinishedQuiz(updatedCourse)
+                  
+                  if (nextQuiz) {
+                    // Navigate to the next unfinished quiz
+                    setSelectedModule(nextQuiz.moduleIndex)
+                    setSelectedQuiz(nextQuiz.quizIndex)
+                    setSelectedLesson(null)
+                    setIsLearningMode(true)
+                  } else {
+                    // No more unfinished quizzes, go back to course overview
+                    setIsLearningMode(false)
+                    setSelectedQuiz(null)
+                    setSelectedLesson(null)
+                    alert('Congratulations! You have completed all quizzes in this course.')
+                  }
+                }
+              }
+            }
           }}
         />
       )

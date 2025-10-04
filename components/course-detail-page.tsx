@@ -26,6 +26,7 @@ export function CourseDetailPage({ courseId }: CourseDetailPageProps) {
   const [selectedQuiz, setSelectedQuiz] = useState<number | null>(null)
   const [isLearningMode, setIsLearningMode] = useState(false)
   const [expandedModules, setExpandedModules] = useState<Set<number>>(new Set([0]))
+  const [lessonCompletionLoading, setLessonCompletionLoading] = useState<Set<string>>(new Set())
 
   useEffect(() => {
     // Only run on client side
@@ -99,6 +100,18 @@ export function CourseDetailPage({ courseId }: CourseDetailPageProps) {
     return `${completedItems}/${totalItems}`
   }
 
+  const getCleanModuleTitle = (title: string) => {
+    // Remove "Module X:" prefix if it exists
+    return title.replace(/^Module\s+\d+:\s*/, '')
+  }
+
+  const getModuleNumber = (title: string, fallbackIndex: number) => {
+    // Extract module number from title like "Module 1: Title"
+    const regex = /^Module\s+(\d+):/
+    const match = regex.exec(title)
+    return match ? match[1] : (fallbackIndex + 1).toString()
+  }
+
   const handleLessonClick = (moduleIndex: number, lessonIndex: number) => {
     setSelectedModule(moduleIndex)
     setSelectedLesson(lessonIndex)
@@ -138,8 +151,50 @@ export function CourseDetailPage({ courseId }: CourseDetailPageProps) {
     return module.quizzes[selectedQuiz]
   }
 
+  const handleLessonCompletion = async (lessonId: string, isCompleted: boolean) => {
+    if (!course) return
+    
+    setLessonCompletionLoading(prev => new Set(prev).add(lessonId))
+    
+    try {
+      const response = await apiService.completeLesson(lessonId, isCompleted)
+      
+      if (response.success) {
+        // Update the lesson completion status in the course state
+        setCourse(prevCourse => {
+          if (!prevCourse) return null
+          
+          const updatedModules = prevCourse.modules.map(module => ({
+            ...module,
+            lessons: module.lessons.map(lesson => 
+              lesson.id === lessonId 
+                ? { ...lesson, is_completed: response.is_completed }
+                : lesson
+            )
+          }))
+          
+          return {
+            ...prevCourse,
+            modules: updatedModules
+          }
+        })
+      }
+    } catch (error) {
+      console.error("Failed to update lesson completion:", error)
+      // You might want to add a toast notification here
+    } finally {
+      setLessonCompletionLoading(prev => {
+        const newSet = new Set(prev)
+        newSet.delete(lessonId)
+        return newSet
+      })
+    }
+  }
+
   const renderMainContent = () => {
     if (currentLesson) {
+      const isLoading = lessonCompletionLoading.has(currentLesson.id)
+      
       return (
         <Card>
           <CardHeader>
@@ -153,6 +208,28 @@ export function CourseDetailPage({ courseId }: CourseDetailPageProps) {
           <CardContent>
             <div className="prose max-w-none">
               <MarkdownRenderer content={currentLesson.content} />
+            </div>
+            <div className="mt-6 pt-4 border-t">
+              <Button
+                onClick={() => handleLessonCompletion(currentLesson.id, !currentLesson.is_completed)}
+                disabled={isLoading}
+                variant={currentLesson.is_completed ? "outline" : "default"}
+                className={currentLesson.is_completed ? "" : "bg-green-600 hover:bg-green-700 text-white"}
+              >
+                {isLoading ? (
+                  "Updating..."
+                ) : currentLesson.is_completed ? (
+                  <>
+                    <CheckCircle className="h-4 w-4 mr-2" />
+                    Mark as Incomplete
+                  </>
+                ) : (
+                  <>
+                    <CheckCircle className="h-4 w-4 mr-2" />
+                    Complete Lesson
+                  </>
+                )}
+              </Button>
             </div>
           </CardContent>
         </Card>
@@ -355,33 +432,32 @@ export function CourseDetailPage({ courseId }: CourseDetailPageProps) {
                           }`}
                         >
                           <div className="flex items-center justify-between">
-                            <div className="flex items-center gap-2">
-                              <div className="flex items-center gap-1">
-                                <span className="text-sm font-medium">
-                                  Module {module.order_index}
-                                </span>
-                                {module.is_completed ? (
-                                  <div className="flex items-center gap-1">
-                                    <CheckCircle className="h-4 w-4 text-green-500" />
-                                    <span className="text-xs text-green-600 font-medium">Completed</span>
-                                  </div>
-                                ) : (
-                                  <div className="flex items-center gap-1">
-                                    <div className="h-3 w-3 rounded-full border-2 border-gray-300"></div>
+                            <div className="flex-1">
+                              <div className="flex items-center justify-between">
+                                <div className="flex items-center gap-2">
+                                  <span className="text-base font-semibold">
+                                    Module {getModuleNumber(module.title, moduleIndex)}
+                                  </span>
+                                  {module.is_completed ? (
+                                    <Badge variant="default" className="bg-green-100 text-green-800 text-xs">
+                                      <CheckCircle className="h-3 w-3 mr-1" />
+                                      Completed
+                                    </Badge>
+                                  ) : (
                                     <span className="text-xs text-gray-500">{calculateModuleProgress(module)} completed</span>
-                                  </div>
-                                )}
+                                  )}
+                                </div>
+                                <ChevronRight className="h-4 w-4 text-gray-400" />
                               </div>
+                              <h4 className="font-medium text-sm mt-1 text-gray-700">{getCleanModuleTitle(module.title)}</h4>
+                              <p className="text-xs text-gray-500 mt-1">
+                                {module.lessons.length} lessons
+                                {module.quizzes && module.quizzes.length > 0 && (
+                                  <span>, {module.quizzes.length} quiz{module.quizzes.length > 1 ? 'zes' : ''}</span>
+                                )}
+                              </p>
                             </div>
-                            <ChevronRight className="h-4 w-4 text-gray-400" />
                           </div>
-                          <h4 className="font-medium text-sm mt-1">Module {module.order_index + 1}</h4>
-                          <p className="text-xs text-gray-500 mt-1">
-                            {module.lessons.length} lessons
-                            {module.quizzes && module.quizzes.length > 0 && (
-                              <span>, {module.quizzes.length} quiz{module.quizzes.length > 1 ? 'zes' : ''}</span>
-                            )}
-                          </p>
                         </button>
                         
                         {selectedModule === moduleIndex && (
@@ -420,15 +496,15 @@ export function CourseDetailPage({ courseId }: CourseDetailPageProps) {
                             {/* Quiz Section */}
                             {module.quizzes && module.quizzes.length > 0 && (
                               <div className="mt-3 pt-3 border-t border-gray-200">
-                                <div className="text-xs font-medium text-gray-500 mb-2 px-2">Quizzes</div>
+                                <div className="text-xs font-semibold text-muted-foreground mb-2 px-2 uppercase tracking-wide">Quizzes</div>
                                 {module.quizzes.map((quiz, quizIndex) => (
                                   <button
                                     key={quiz.id}
                                     onClick={() => handleQuizClick(moduleIndex, quizIndex)}
-                                    className={`w-full text-left p-2 rounded cursor-pointer transition-colors ${
+                                    className={`w-full text-left p-2 rounded cursor-pointer transition-colors border border-blue-200 bg-blue-50/30 ${
                                       selectedQuiz === quizIndex
-                                        ? 'bg-primary/5 border border-primary/10'
-                                        : 'hover:bg-gray-50'
+                                        ? 'bg-blue-100 border-blue-300'
+                                        : 'hover:bg-blue-50'
                                     }`}
                                   >
                                     <div className="flex items-center gap-2">

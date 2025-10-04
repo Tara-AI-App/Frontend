@@ -21,6 +21,8 @@ function CourseViewContent({ courseId }: CourseViewPageProps) {
 
   const [selectedModule, setSelectedModule] = useState(0)
   const [selectedLesson, setSelectedLesson] = useState<number | null>(null)
+  const [lessonCompletionLoading, setLessonCompletionLoading] = useState<Set<string>>(new Set())
+  const [lessonCompletionStates, setLessonCompletionStates] = useState<Set<number>>(new Set())
 
   // Mock course data with internal Gojek use cases - expanded with multiple chapters
   const mockCourses = {
@@ -42,13 +44,15 @@ function CourseViewContent({ courseId }: CourseViewPageProps) {
           title: "Architecture Overview & System Design",
           duration: "45 min",
           lessons: 6,
+          quizzes: 3,
           completed: false,
+          completedLessons: 1,
           lessons_data: [
             {
               id: 1,
               title: "Go-Food Merchant Homepage Recommendation Architecture",
               duration: "8 min",
-              completed: false,
+              completed: true,
               content: `# Go-Food Merchant Homepage Recommendation Architecture
 
 ## Overview
@@ -180,6 +184,43 @@ func (mps *MerchantProfileService) GetProfile(ctx context.Context, merchantID st
 
 > **Best Practice**: Each service maintains its own database and communicates through well-defined APIs and events.`,
             },
+            {
+              id: 3,
+              title: "API Gateway Pattern",
+              duration: "9 min",
+              completed: false,
+              content: `# API Gateway Pattern\n\nLearn about API Gateway implementation for merchant services.`,
+            },
+            {
+              id: 4,
+              title: "Load Balancing Strategies",
+              duration: "7 min",
+              completed: false,
+              content: `# Load Balancing Strategies\n\nUnderstand different load balancing approaches.`,
+            },
+          ],
+          quizzes_data: [
+            {
+              id: 1,
+              title: "Quiz 1: Architecture Fundamentals",
+              questions: 5,
+              duration: "10 min",
+              completed: false,
+            },
+            {
+              id: 2,
+              title: "Quiz 2: Microservices Design",
+              questions: 7,
+              duration: "15 min",
+              completed: false,
+            },
+            {
+              id: 3,
+              title: "Quiz 3: API Gateway & Load Balancing",
+              questions: 6,
+              duration: "12 min",
+              completed: false,
+            },
           ],
         },
         {
@@ -187,13 +228,15 @@ func (mps *MerchantProfileService) GetProfile(ctx context.Context, merchantID st
           title: "Data Pipeline & Feature Engineering",
           duration: "55 min",
           lessons: 7,
-          completed: false,
+          quizzes: 3,
+          completed: true,
+          completedLessons: 7,
           lessons_data: [
             {
-              id: 1,
+              id: 5,
               title: "Real-time Data Ingestion with Kafka",
               duration: "12 min",
-              completed: false,
+              completed: true,
               content: `# Real-time Data Ingestion for Merchant Recommendations
 
 ## Kafka Architecture for Go-Food Merchant Data
@@ -245,6 +288,214 @@ func (mep *MerchantEventProducer) PublishMerchantActivity(
 
 > **Performance**: This pipeline processes 2M+ events per minute with sub-second latency for real-time recommendations.`,
             },
+            {
+              id: 6,
+              title: "Feature Store Implementation",
+              duration: "10 min",
+              completed: true,
+              content: `# Feature Store Implementation\n\nLearn how to build a feature store for ML models.`,
+            },
+            {
+              id: 7,
+              title: "Stream Processing with Flink",
+              duration: "11 min",
+              completed: true,
+              content: `# Stream Processing\n\nImplement real-time stream processing.`,
+            },
+          ],
+          quizzes_data: [
+            {
+              id: 4,
+              title: "Quiz 1: Kafka Fundamentals",
+              questions: 6,
+              duration: "12 min",
+              completed: true,
+            },
+            {
+              id: 5,
+              title: "Quiz 2: Feature Engineering",
+              questions: 8,
+              duration: "15 min",
+              completed: true,
+            },
+            {
+              id: 6,
+              title: "Quiz 3: Stream Processing",
+              questions: 7,
+              duration: "14 min",
+              completed: true,
+            },
+          ],
+        },
+        {
+          id: 3,
+          title: "ML Model Development & Training",
+          duration: "60 min",
+          lessons: 5,
+          quizzes: 3,
+          completed: false,
+          completedLessons: 0,
+          lessons_data: [
+            {
+              id: 8,
+              title: "Recommendation Model Architecture",
+              duration: "14 min",
+              completed: false,
+              content: `# ML Model Architecture\n\nDesign recommendation models for merchants.`,
+            },
+            {
+              id: 9,
+              title: "Training Pipeline Setup",
+              duration: "12 min",
+              completed: false,
+              content: `# Training Pipeline\n\nSet up automated training pipelines.`,
+            },
+          ],
+          quizzes_data: [
+            {
+              id: 7,
+              title: "Quiz 1: ML Fundamentals",
+              questions: 8,
+              duration: "16 min",
+              completed: false,
+            },
+            {
+              id: 8,
+              title: "Quiz 2: Model Training",
+              questions: 7,
+              duration: "14 min",
+              completed: false,
+            },
+            {
+              id: 9,
+              title: "Quiz 3: Model Evaluation",
+              questions: 6,
+              duration: "12 min",
+              completed: false,
+            },
+          ],
+        },
+        {
+          id: 4,
+          title: "Model Serving & Deployment",
+          duration: "50 min",
+          lessons: 6,
+          quizzes: 3,
+          completed: false,
+          completedLessons: 0,
+          lessons_data: [
+            {
+              id: 10,
+              title: "TensorFlow Serving Setup",
+              duration: "11 min",
+              completed: false,
+              content: `# Model Serving\n\nDeploy models with TensorFlow Serving.`,
+            },
+          ],
+          quizzes_data: [
+            {
+              id: 10,
+              title: "Quiz 1: Model Serving",
+              questions: 7,
+              duration: "14 min",
+              completed: false,
+            },
+            {
+              id: 11,
+              title: "Quiz 2: Deployment Strategies",
+              questions: 6,
+              duration: "12 min",
+              completed: false,
+            },
+            {
+              id: 12,
+              title: "Quiz 3: Monitoring & Scaling",
+              questions: 8,
+              duration: "16 min",
+              completed: false,
+            },
+          ],
+        },
+        {
+          id: 5,
+          title: "Performance Optimization",
+          duration: "45 min",
+          lessons: 5,
+          quizzes: 3,
+          completed: false,
+          completedLessons: 0,
+          lessons_data: [
+            {
+              id: 11,
+              title: "Caching Strategies",
+              duration: "9 min",
+              completed: false,
+              content: `# Caching Strategies\n\nOptimize performance with caching.`,
+            },
+          ],
+          quizzes_data: [
+            {
+              id: 13,
+              title: "Quiz 1: Caching Fundamentals",
+              questions: 6,
+              duration: "12 min",
+              completed: false,
+            },
+            {
+              id: 14,
+              title: "Quiz 2: Performance Tuning",
+              questions: 7,
+              duration: "14 min",
+              completed: false,
+            },
+            {
+              id: 15,
+              title: "Quiz 3: Latency Optimization",
+              questions: 5,
+              duration: "10 min",
+              completed: false,
+            },
+          ],
+        },
+        {
+          id: 6,
+          title: "Monitoring & Observability",
+          duration: "40 min",
+          lessons: 4,
+          quizzes: 3,
+          completed: false,
+          completedLessons: 0,
+          lessons_data: [
+            {
+              id: 12,
+              title: "Metrics & Logging",
+              duration: "10 min",
+              completed: false,
+              content: `# Monitoring\n\nImplement comprehensive monitoring.`,
+            },
+          ],
+          quizzes_data: [
+            {
+              id: 16,
+              title: "Quiz 1: Monitoring Tools",
+              questions: 6,
+              duration: "12 min",
+              completed: false,
+            },
+            {
+              id: 17,
+              title: "Quiz 2: Alerting Strategies",
+              questions: 5,
+              duration: "10 min",
+              completed: false,
+            },
+            {
+              id: 18,
+              title: "Quiz 3: Troubleshooting",
+              questions: 7,
+              duration: "14 min",
+              completed: false,
+            },
           ],
         },
       ],
@@ -267,7 +518,9 @@ func (mep *MerchantEventProducer) PublishMerchantActivity(
           title: "System Architecture for Scale",
           duration: "25 min",
           lessons: 4,
+          quizzes: 2,
           completed: false,
+          completedLessons: 0,
           lessons_data: [
             {
               id: 1,
@@ -321,6 +574,22 @@ func (gw *APIGateway) HandleRideRequest(ctx context.Context, req *RideRequest) (
 > **Performance**: Handles 100K+ concurrent requests with P99 latency under 200ms.`,
             },
           ],
+          quizzes_data: [
+            {
+              id: 1,
+              title: "Quiz 1: Architecture Basics",
+              questions: 5,
+              duration: "10 min",
+              completed: false,
+            },
+            {
+              id: 2,
+              title: "Quiz 2: Scaling Strategies",
+              questions: 6,
+              duration: "12 min",
+              completed: false,
+            },
+          ],
         },
       ],
     },
@@ -332,6 +601,35 @@ func (gw *APIGateway) HandleRideRequest(ctx context.Context, req *RideRequest) (
   const handleLessonClick = (moduleIndex: number, lessonId: number) => {
     setSelectedModule(moduleIndex)
     setSelectedLesson(lessonId)
+  }
+
+  const handleLessonCompletion = async (lessonId: number, isCompleted: boolean) => {
+    setLessonCompletionLoading(prev => new Set(prev).add(lessonId.toString()))
+    
+    try {
+      // For now, we'll simulate the API call with mock data
+      // In a real implementation, you would call apiService.completeLesson()
+      await new Promise(resolve => setTimeout(resolve, 500)) // Simulate API call
+      
+      // Update the local completion state
+      setLessonCompletionStates(prev => {
+        const newSet = new Set(prev)
+        if (isCompleted) {
+          newSet.add(lessonId)
+        } else {
+          newSet.delete(lessonId)
+        }
+        return newSet
+      })
+    } catch (error) {
+      console.error("Failed to update lesson completion:", error)
+    } finally {
+      setLessonCompletionLoading(prev => {
+        const newSet = new Set(prev)
+        newSet.delete(lessonId.toString())
+        return newSet
+      })
+    }
   }
 
   return (
@@ -383,6 +681,37 @@ func (gw *APIGateway) HandleRideRequest(ctx context.Context, req *RideRequest) (
                         ?.content || "Content not found"
                     }
                   />
+                  
+                  {/* Lesson Completion Button */}
+                  <div className="mt-6 pt-4 border-t">
+                    {(() => {
+                      const isCompleted = lessonCompletionStates.has(selectedLesson)
+                      const isLoading = lessonCompletionLoading.has(selectedLesson.toString())
+                      
+                      return (
+                        <Button
+                          onClick={() => handleLessonCompletion(selectedLesson, !isCompleted)}
+                          disabled={isLoading}
+                          variant={isCompleted ? "outline" : "default"}
+                          className={isCompleted ? "" : "bg-green-600 hover:bg-green-700 text-white"}
+                        >
+                          {isLoading ? (
+                            "Updating..."
+                          ) : isCompleted ? (
+                            <>
+                              <CheckCircle className="h-4 w-4 mr-2" />
+                              Mark as Incomplete
+                            </>
+                          ) : (
+                            <>
+                              <CheckCircle className="h-4 w-4 mr-2" />
+                              Complete Lesson
+                            </>
+                          )}
+                        </Button>
+                      )
+                    })()}
+                  </div>
                 </div>
 
                 <div className="flex justify-between">
@@ -441,8 +770,8 @@ func (gw *APIGateway) HandleRideRequest(ctx context.Context, req *RideRequest) (
                           onClick={() => setSelectedModule(selectedModule === index ? -1 : index)}
                         >
                           <div className="flex items-center justify-between">
-                            <div className="flex items-center gap-3">
-                              <div className={`flex h-10 w-10 items-center justify-center rounded-full font-semibold ${
+                            <div className="flex items-center gap-3 flex-1 min-w-0">
+                              <div className={`flex h-10 w-10 items-center justify-center rounded-full font-semibold shrink-0 ${
                                 module.completed 
                                   ? 'bg-green-100 text-green-700 border-2 border-green-500' 
                                   : 'bg-primary/10 text-primary'
@@ -450,62 +779,114 @@ func (gw *APIGateway) HandleRideRequest(ctx context.Context, req *RideRequest) (
                                 {module.completed ? (
                                   <CheckCircle className="h-5 w-5 text-green-600" />
                                 ) : (
-                                  <span>{module.id}</span>
+                                  <span className="text-gray-400">{module.completedLessons}/{module.lessons + (module.quizzes || 0)}</span>
                                 )}
                               </div>
-                              <div className="flex-1">
-                                <div className="flex items-center gap-3">
-                                  <CardTitle className="text-base md:text-lg">{module.title}</CardTitle>
-                                  {module.completed && (
-                                    <Badge variant="default" className="bg-green-100 text-green-800 text-xs">
-                                      <CheckCircle className="h-3 w-3 mr-1" />
-                                      Completed
-                                    </Badge>
-                                  )}
+                              <div className="flex-1 min-w-0">
+                                <div className="flex flex-col gap-1">
+                                  <div className="flex items-center gap-2 flex-wrap">
+                                    <CardTitle className="text-base md:text-lg">Module {module.id}</CardTitle>
+                                    {module.completed && (
+                                      <Badge variant="default" className="bg-green-100 text-green-800 text-xs">
+                                        <CheckCircle className="h-3 w-3 mr-1" />
+                                        Completed
+                                      </Badge>
+                                    )}
+                                  </div>
+                                  <p className="text-sm font-medium">{module.title}</p>
+                                  <p className="text-xs text-muted-foreground">
+                                    {module.lessons} lessons, {module.quizzes || 0} quizzes
+                                  </p>
                                 </div>
-                                <p className="text-sm text-muted-foreground">
-                                  {module.lessons} lessons • {module.duration}
-                                </p>
                               </div>
                             </div>
                             <ChevronRight
-                              className={`h-5 w-5 transition-transform ${selectedModule === index ? "rotate-90" : ""}`}
+                              className={`h-5 w-5 transition-transform shrink-0 ${selectedModule === index ? "rotate-90" : ""}`}
                             />
                           </div>
                         </CardHeader>
 
                         {selectedModule === index && (
-                          <CardContent className="pt-0">
-                            <div className="space-y-2">
-                              {module.lessons_data.map((lesson) => (
-                                <div
-                                  key={lesson.id}
-                                  className="flex items-center justify-between p-3 rounded-lg hover:bg-muted/50 transition-colors cursor-pointer"
-                                  onClick={() => handleLessonClick(index, lesson.id)}
-                                >
-                                  <div className="flex items-center gap-3">
-                                    <div className={`flex h-8 w-8 items-center justify-center rounded-full ${
-                                      lesson.completed 
-                                        ? 'bg-green-100 border-2 border-green-500' 
-                                        : 'bg-gray-100 border-2 border-gray-300'
-                                    }`}>
-                                      {lesson.completed ? (
-                                        <CheckCircle className="h-4 w-4 text-green-600" />
-                                      ) : (
-                                        <Play className="h-4 w-4 text-gray-600" />
-                                      )}
+                          <CardContent className="pt-4 pb-6">
+                            <div className="space-y-6">
+                              {/* Lessons Section */}
+                              {module.lessons_data && module.lessons_data.length > 0 && (
+                                <div className="space-y-2">
+                                  {module.lessons_data.map((lesson) => (
+                                    <div
+                                      key={lesson.id}
+                                      className="flex items-center justify-between p-3 rounded-lg hover:bg-muted/50 transition-colors cursor-pointer"
+                                      onClick={() => handleLessonClick(index, lesson.id)}
+                                    >
+                                      <div className="flex items-center gap-3">
+                                        <div className={`flex h-8 w-8 items-center justify-center rounded-full ${
+                                          lesson.completed 
+                                            ? 'bg-green-100 border-2 border-green-500' 
+                                            : 'bg-gray-100 border-2 border-gray-300'
+                                        }`}>
+                                          {lesson.completed ? (
+                                            <CheckCircle className="h-4 w-4 text-green-600" />
+                                          ) : (
+                                            <Play className="h-4 w-4 text-gray-600" />
+                                          )}
+                                        </div>
+                                        <span className={`font-medium text-sm md:text-base transition-colors ${
+                                          lesson.completed 
+                                            ? 'text-green-800' 
+                                            : 'hover:text-primary'
+                                        }`}>
+                                          {lesson.title}
+                                        </span>
+                                      </div>
+                                      <span className="text-sm text-muted-foreground">{lesson.duration}</span>
                                     </div>
-                                    <span className={`font-medium text-sm md:text-base transition-colors ${
-                                      lesson.completed 
-                                        ? 'text-green-800' 
-                                        : 'hover:text-primary'
-                                    }`}>
-                                      {lesson.title}
-                                    </span>
-                                  </div>
-                                  <span className="text-sm text-muted-foreground">{lesson.duration}</span>
+                                  ))}
                                 </div>
-                              ))}
+                              )}
+
+                              {/* Quizzes Section */}
+                              {module.quizzes_data && module.quizzes_data.length > 0 && (
+                                <div className="space-y-3">
+                                  <h3 className="text-sm font-semibold text-muted-foreground uppercase tracking-wide">Quizzes</h3>
+                                  <div className="space-y-2">
+                                    {module.quizzes_data.map((quiz) => (
+                                      <div
+                                        key={quiz.id}
+                                        className="flex items-center justify-between p-3 rounded-lg hover:bg-muted/50 transition-colors cursor-pointer border border-blue-200 bg-blue-50/30"
+                                      >
+                                        <div className="flex items-center gap-3">
+                                          <div className={`flex h-8 w-8 items-center justify-center rounded-full text-xs font-bold ${
+                                            quiz.completed 
+                                              ? 'bg-green-100 border-2 border-green-500 text-green-700' 
+                                              : 'bg-blue-100 border-2 border-blue-400 text-blue-700'
+                                          }`}>
+                                            {quiz.completed ? (
+                                              <CheckCircle className="h-4 w-4 text-green-600" />
+                                            ) : (
+                                              <span>Q{quiz.id - (module.id - 1) * 3}</span>
+                                            )}
+                                          </div>
+                                          <div className="flex flex-col">
+                                            <span className={`font-medium text-sm transition-colors ${
+                                              quiz.completed 
+                                                ? 'text-green-800' 
+                                                : 'text-blue-900 hover:text-primary'
+                                            }`}>
+                                              {quiz.title}
+                                            </span>
+                                            {!!quiz.questions && (
+                                              <span className="text-xs text-muted-foreground">
+                                                {quiz.questions} questions
+                                              </span>
+                                            )}
+                                          </div>
+                                        </div>
+                                        <span className="text-sm text-muted-foreground">{quiz.duration}</span>
+                                      </div>
+                                    ))}
+                                  </div>
+                                </div>
+                              )}
                             </div>
                           </CardContent>
                         )}

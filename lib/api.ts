@@ -255,6 +255,13 @@ class ApiService {
     return this.request<CourseDetail>(`/course/${courseId}`)
   }
 
+  async completeLesson(lessonId: string, isCompleted: boolean = true): Promise<{ success: boolean; message: string; lesson_id: string; is_completed: boolean }> {
+    return this.request<{ success: boolean; message: string; lesson_id: string; is_completed: boolean }>(`/course/lesson/${lessonId}/complete`, {
+      method: 'PATCH',
+      body: JSON.stringify({ is_completed: isCompleted }),
+    })
+  }
+
   // AI Course Generation
   async generateCourse(request: {
     token_github: string

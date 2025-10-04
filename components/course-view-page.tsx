@@ -2,7 +2,7 @@
 
 import { useState, Suspense } from "react"
 import { useSearchParams, useRouter } from "next/navigation"
-import { BookOpen, CheckCircle, Clock, Users, Star, ChevronRight, ArrowLeft, Download, Share } from "lucide-react"
+import { BookOpen, CheckCircle, Clock, Users, Star, ChevronRight, ArrowLeft, Download, Share, Play } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Badge } from "@/components/ui/badge"
@@ -442,11 +442,27 @@ func (gw *APIGateway) HandleRideRequest(ctx context.Context, req *RideRequest) (
                         >
                           <div className="flex items-center justify-between">
                             <div className="flex items-center gap-3">
-                              <div className="flex h-10 w-10 items-center justify-center rounded-full bg-primary/10 text-primary font-semibold">
-                                {module.id}
+                              <div className={`flex h-10 w-10 items-center justify-center rounded-full font-semibold ${
+                                module.completed 
+                                  ? 'bg-green-100 text-green-700 border-2 border-green-500' 
+                                  : 'bg-primary/10 text-primary'
+                              }`}>
+                                {module.completed ? (
+                                  <CheckCircle className="h-5 w-5 text-green-600" />
+                                ) : (
+                                  <span>{module.id}</span>
+                                )}
                               </div>
-                              <div>
-                                <CardTitle className="text-base md:text-lg">{module.title}</CardTitle>
+                              <div className="flex-1">
+                                <div className="flex items-center gap-3">
+                                  <CardTitle className="text-base md:text-lg">{module.title}</CardTitle>
+                                  {module.completed && (
+                                    <Badge variant="default" className="bg-green-100 text-green-800 text-xs">
+                                      <CheckCircle className="h-3 w-3 mr-1" />
+                                      Completed
+                                    </Badge>
+                                  )}
+                                </div>
                                 <p className="text-sm text-muted-foreground">
                                   {module.lessons} lessons • {module.duration}
                                 </p>
@@ -468,14 +484,22 @@ func (gw *APIGateway) HandleRideRequest(ctx context.Context, req *RideRequest) (
                                   onClick={() => handleLessonClick(index, lesson.id)}
                                 >
                                   <div className="flex items-center gap-3">
-                                    <div className="flex h-6 w-6 items-center justify-center rounded-full border-2 border-muted-foreground/30">
+                                    <div className={`flex h-8 w-8 items-center justify-center rounded-full ${
+                                      lesson.completed 
+                                        ? 'bg-green-100 border-2 border-green-500' 
+                                        : 'bg-gray-100 border-2 border-gray-300'
+                                    }`}>
                                       {lesson.completed ? (
                                         <CheckCircle className="h-4 w-4 text-green-600" />
                                       ) : (
-                                        <Play className="h-3 w-3" />
+                                        <Play className="h-4 w-4 text-gray-600" />
                                       )}
                                     </div>
-                                    <span className="font-medium text-sm md:text-base hover:text-primary transition-colors">
+                                    <span className={`font-medium text-sm md:text-base transition-colors ${
+                                      lesson.completed 
+                                        ? 'text-green-800' 
+                                        : 'hover:text-primary'
+                                    }`}>
                                       {lesson.title}
                                     </span>
                                   </div>

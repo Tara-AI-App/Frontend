@@ -90,6 +90,15 @@ export function CourseDetailPage({ courseId }: CourseDetailPageProps) {
     }
   }
 
+  const calculateModuleProgress = (module: CourseDetail['modules'][0]) => {
+    const completedLessons = module.lessons?.filter((lesson: any) => lesson.is_completed).length || 0
+    const completedQuizzes = module.quizzes?.filter((quiz: any) => quiz.is_completed).length || 0
+    const totalItems = (module.lessons?.length || 0) + (module.quizzes?.length || 0)
+    const completedItems = completedLessons + completedQuizzes
+    
+    return `${completedItems}/${totalItems}`
+  }
+
   const handleLessonClick = (moduleIndex: number, lessonIndex: number) => {
     setSelectedModule(moduleIndex)
     setSelectedLesson(lessonIndex)
@@ -351,16 +360,27 @@ export function CourseDetailPage({ courseId }: CourseDetailPageProps) {
                                 <span className="text-sm font-medium">
                                   Module {module.order_index}
                                 </span>
-                                {module.is_completed && (
-                                  <CheckCircle className="h-4 w-4 text-green-500" />
+                                {module.is_completed ? (
+                                  <div className="flex items-center gap-1">
+                                    <CheckCircle className="h-4 w-4 text-green-500" />
+                                    <span className="text-xs text-green-600 font-medium">Completed</span>
+                                  </div>
+                                ) : (
+                                  <div className="flex items-center gap-1">
+                                    <div className="h-3 w-3 rounded-full border-2 border-gray-300"></div>
+                                    <span className="text-xs text-gray-500">{calculateModuleProgress(module)} completed</span>
+                                  </div>
                                 )}
                               </div>
                             </div>
                             <ChevronRight className="h-4 w-4 text-gray-400" />
                           </div>
-                          <h4 className="font-medium text-sm mt-1">{module.title}</h4>
+                          <h4 className="font-medium text-sm mt-1">Module {module.order_index + 1}</h4>
                           <p className="text-xs text-gray-500 mt-1">
                             {module.lessons.length} lessons
+                            {module.quizzes && module.quizzes.length > 0 && (
+                              <span>, {module.quizzes.length} quiz{module.quizzes.length > 1 ? 'zes' : ''}</span>
+                            )}
                           </p>
                         </button>
                         
@@ -377,15 +397,22 @@ export function CourseDetailPage({ courseId }: CourseDetailPageProps) {
                                 }`}
                               >
                                 <div className="flex items-center gap-2">
-                                  <div className="flex items-center gap-1">
-                                    <span className="text-xs text-gray-500">
-                                      {lesson.index}
-                                    </span>
-                                    {lesson.is_completed && (
-                                      <CheckCircle className="h-3 w-3 text-green-500" />
+                                  <div className={`w-5 h-5 rounded-full flex items-center justify-center ${
+                                    lesson.is_completed 
+                                      ? 'bg-green-100 border border-green-500' 
+                                      : 'bg-gray-100 border border-gray-300'
+                                  }`}>
+                                    {lesson.is_completed ? (
+                                      <CheckCircle className="h-3 w-3 text-green-600" />
+                                    ) : (
+                                      <span className="text-xs font-medium text-gray-600">
+                                        {lesson.index}
+                                      </span>
                                     )}
                                   </div>
-                                  <span className="text-sm">{lesson.title}</span>
+                                  <span className={`text-sm ${lesson.is_completed ? 'text-green-800 font-medium' : ''}`}>
+                                    {lesson.title}
+                                  </span>
                                 </div>
                               </button>
                             ))}
@@ -405,15 +432,22 @@ export function CourseDetailPage({ courseId }: CourseDetailPageProps) {
                                     }`}
                                   >
                                     <div className="flex items-center gap-2">
-                                      <div className="flex items-center gap-1">
-                                        <span className="text-xs text-gray-500">
-                                          Q{quizIndex + 1}
-                                        </span>
-                                        {quiz.is_completed && (
-                                          <CheckCircle className="h-3 w-3 text-green-500" />
+                                      <div className={`w-5 h-5 rounded-full flex items-center justify-center ${
+                                        quiz.is_completed 
+                                          ? 'bg-green-100 border border-green-500' 
+                                          : 'bg-blue-100 border border-blue-300'
+                                      }`}>
+                                        {quiz.is_completed ? (
+                                          <CheckCircle className="h-3 w-3 text-green-600" />
+                                        ) : (
+                                          <span className="text-xs font-medium text-blue-700">
+                                            Q{quizIndex + 1}
+                                          </span>
                                         )}
                                       </div>
-                                      <span className="text-sm">Quiz {quizIndex + 1}</span>
+                                      <span className={`text-sm ${quiz.is_completed ? 'text-green-800 font-medium' : 'text-blue-800'}`}>
+                                        Quiz {quizIndex + 1}
+                                      </span>
                                     </div>
                                   </button>
                                 ))}
@@ -501,7 +535,19 @@ export function CourseDetailPage({ courseId }: CourseDetailPageProps) {
                       >
                         <div className="flex items-center justify-between">
                           <div className="flex-1">
-                            <h3 className="font-semibold text-lg">{module.title}</h3>
+                            <div className="flex items-center gap-3">
+                              <h3 className="font-semibold text-lg">{module.title}</h3>
+                              {module.is_completed ? (
+                                <Badge variant="default" className="bg-green-100 text-green-800 text-xs">
+                                  <CheckCircle className="h-3 w-3 mr-1" />
+                                  Completed
+                                </Badge>
+                              ) : (
+                                <Badge variant="secondary" className="text-xs">
+                                  {calculateModuleProgress(module)} completed
+                                </Badge>
+                              )}
+                            </div>
                             <p className="text-sm text-gray-500 mt-1">
                               {module.lessons.length} lessons
                               {module.quizzes && module.quizzes.length > 0 && (
@@ -527,17 +573,29 @@ export function CourseDetailPage({ courseId }: CourseDetailPageProps) {
                             >
                               <div className="flex items-center justify-between">
                                 <div className="flex items-center gap-3">
-                                  <div className="w-8 h-8 rounded-full bg-primary/10 flex items-center justify-center">
-                                    <span className="text-sm font-medium text-primary">
-                                      {lesson.index}
-                                    </span>
+                                  <div className={`w-8 h-8 rounded-full flex items-center justify-center ${
+                                    lesson.is_completed 
+                                      ? 'bg-green-100 border-2 border-green-500' 
+                                      : 'bg-gray-100 border-2 border-gray-300'
+                                  }`}>
+                                    {lesson.is_completed ? (
+                                      <CheckCircle className="h-4 w-4 text-green-600" />
+                                    ) : (
+                                      <span className="text-sm font-medium text-gray-600">
+                                        {lesson.index}
+                                      </span>
+                                    )}
                                   </div>
                                   <div>
-                                    <h4 className="font-medium">{lesson.title}</h4>
+                                    <h4 className={`font-medium ${lesson.is_completed ? 'text-green-800' : ''}`}>
+                                      {lesson.title}
+                                    </h4>
                                   </div>
                                 </div>
                                 {lesson.is_completed && (
-                                  <CheckCircle className="h-5 w-5 text-green-500" />
+                                  <Badge variant="default" className="bg-green-100 text-green-800 text-xs">
+                                    Complete
+                                  </Badge>
                                 )}
                               </div>
                             </button>
@@ -555,21 +613,33 @@ export function CourseDetailPage({ courseId }: CourseDetailPageProps) {
                                   className="w-full text-left p-4 border-b last:border-b-0 hover:bg-blue-100 transition-colors"
                                   onClick={() => handleQuizClick(moduleIndex, quizIndex)}
                                 >
-                                  <div className="flex items-center justify-between">
-                                    <div className="flex items-center gap-3">
-                                      <div className="w-8 h-8 rounded-full bg-blue-100 flex items-center justify-center">
-                                        <span className="text-sm font-medium text-blue-700">
-                                          Q{quizIndex + 1}
-                                        </span>
+                                    <div className="flex items-center justify-between">
+                                      <div className="flex items-center gap-3">
+                                        <div className={`w-8 h-8 rounded-full flex items-center justify-center ${
+                                          quiz.is_completed 
+                                            ? 'bg-green-100 border-2 border-green-500' 
+                                            : 'bg-blue-100 border-2 border-blue-300'
+                                        }`}>
+                                          {quiz.is_completed ? (
+                                            <CheckCircle className="h-4 w-4 text-green-600" />
+                                          ) : (
+                                            <span className="text-sm font-medium text-blue-700">
+                                              Q{quizIndex + 1}
+                                            </span>
+                                          )}
+                                        </div>
+                                        <div>
+                                          <h4 className={`font-medium ${quiz.is_completed ? 'text-green-800' : 'text-blue-800'}`}>
+                                            Quiz {quizIndex + 1}
+                                          </h4>
+                                        </div>
                                       </div>
-                                      <div>
-                                        <h4 className="font-medium">Quiz {quizIndex + 1}</h4>
-                                      </div>
+                                      {quiz.is_completed && (
+                                        <Badge variant="default" className="bg-green-100 text-green-800 text-xs">
+                                          Complete
+                                        </Badge>
+                                      )}
                                     </div>
-                                    {quiz.is_completed && (
-                                      <CheckCircle className="h-5 w-5 text-green-500" />
-                                    )}
-                                  </div>
                                 </button>
                               ))}
                             </div>

@@ -14,9 +14,20 @@ export function MarkdownRenderer({ content, className = "" }: MarkdownRendererPr
   const [copiedCode, setCopiedCode] = useState<string | null>(null)
 
   const copyToClipboard = async (code: string) => {
-    await navigator.clipboard.writeText(code)
-    setCopiedCode(code)
-    setTimeout(() => setCopiedCode(null), 2000)
+    try {
+      if (navigator?.clipboard?.writeText) {
+        await navigator.clipboard.writeText(code)
+        setCopiedCode(code)
+        setTimeout(() => setCopiedCode(null), 2000)
+      }
+    } catch (error) {
+      console.error('Failed to copy to clipboard:', error)
+    }
+  }
+
+  // Validate content prop
+  if (!content) {
+    return <div className={`prose prose-sm max-w-none ${className}`}>No content available</div>
   }
 
   return (
@@ -24,11 +35,30 @@ export function MarkdownRenderer({ content, className = "" }: MarkdownRendererPr
       <ReactMarkdown
         components={{
           code({ node, inline, className, children, ...props }: any) {
-            const codeString = String(children).replace(/\n$/, "")
-            const language = className?.replace("language-", "") || "text"
-
+            if (!children) return null
+            
             return !inline ? (
+              <code className="text-sm font-mono text-foreground">
+                {children}
+              </code>
+            ) : (
+              <code className="bg-muted px-1.5 py-0.5 rounded text-sm font-mono">
+                {children}
+              </code>
+            )
+          },
+          pre({ children }) {
+            // This handles the pre element styling and structure for code blocks
+            // Extract text content for copy functionality
+            const codeString = typeof children === 'string' ? children : 
+              children?.toString?.() || 
+              (Array.isArray(children) ? children.join('') : '') || ''
+
+            return (
               <div className="relative group my-4">
+                <pre className="bg-muted p-4 rounded-lg overflow-x-auto border">
+                  {children || ''}
+                </pre>
                 <Button
                   variant="ghost"
                   size="sm"
@@ -37,26 +67,8 @@ export function MarkdownRenderer({ content, className = "" }: MarkdownRendererPr
                 >
                   {copiedCode === codeString ? <Check className="h-4 w-4" /> : <Copy className="h-4 w-4" />}
                 </Button>
-                <pre className="bg-muted p-4 rounded-lg overflow-x-auto border">
-                  <code className="text-sm font-mono text-foreground" {...props}>
-                    {children}
-                  </code>
-                </pre>
-                {language !== "text" && (
-                  <div className="absolute top-2 left-2 text-xs text-muted-foreground bg-background px-2 py-1 rounded border">
-                    {language}
-                  </div>
-                )}
               </div>
-            ) : (
-              <code className="bg-muted px-1.5 py-0.5 rounded text-sm font-mono" {...props}>
-                {children}
-              </code>
             )
-          },
-          pre: ({ children }) => {
-            // Handle pre elements that might be wrapped in p tags
-            return <>{children}</>
           },
           h1: ({ children }) => (
             <h1 className="text-2xl font-bold text-foreground mb-4 mt-6 border-b pb-2">{children}</h1>
@@ -74,8 +86,8 @@ export function MarkdownRenderer({ content, className = "" }: MarkdownRendererPr
           ),
           strong: ({ children }) => <strong className="font-semibold text-foreground">{children}</strong>,
           a: ({ children, href }) => (
-            <a href={href} className="text-primary hover:underline font-medium">
-              {children}
+            <a href={href || '#'} className="text-primary hover:underline font-medium">
+              {children || ''}
             </a>
           ),
         }}

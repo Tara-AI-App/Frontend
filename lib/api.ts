@@ -55,6 +55,19 @@ export interface CourseListResponse {
   total: number
 }
 
+export interface QuizDetail {
+  id: string
+  questions: Array<{
+    question: string
+    choices: string[]
+    answer: string
+  }>
+  is_completed: boolean
+  is_correct: boolean
+  created_at: string
+  updated_at: string
+}
+
 export interface LessonDetail {
   id: string
   title: string
@@ -73,6 +86,7 @@ export interface ModuleDetail {
   created_at: string
   updated_at: string
   lessons: LessonDetail[]
+  quizzes: QuizDetail[]
 }
 
 export interface CourseDetail {

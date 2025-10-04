@@ -9,10 +9,11 @@ import { Badge } from "@/components/ui/badge"
 import { Progress } from "@/components/ui/progress"
 import { MarkdownRenderer } from "@/components/markdown-renderer"
 import { TaraChatbot } from "@/components/tara-chatbot"
+import { QuizComponent } from "@/components/quiz-component"
 import { apiService, CourseDetail } from "@/lib/api"
 
 interface CourseDetailPageProps {
-  courseId: string
+  readonly courseId: string
 }
 
 export function CourseDetailPage({ courseId }: CourseDetailPageProps) {
@@ -22,6 +23,7 @@ export function CourseDetailPage({ courseId }: CourseDetailPageProps) {
   const [error, setError] = useState<string | null>(null)
   const [selectedModule, setSelectedModule] = useState(0)
   const [selectedLesson, setSelectedLesson] = useState<number | null>(null)
+  const [selectedQuiz, setSelectedQuiz] = useState<number | null>(null)
   const [isLearningMode, setIsLearningMode] = useState(false)
   const [expandedModules, setExpandedModules] = useState<Set<number>>(new Set([0]))
 
@@ -84,13 +86,21 @@ export function CourseDetailPage({ courseId }: CourseDetailPageProps) {
     } else if (course.progress > 0) {
       return <Badge variant="secondary">In Progress</Badge>
     } else {
-      return <Badge variant="outline">Not Started</Badge>
+      return null
     }
   }
 
   const handleLessonClick = (moduleIndex: number, lessonIndex: number) => {
     setSelectedModule(moduleIndex)
     setSelectedLesson(lessonIndex)
+    setSelectedQuiz(null)
+    setIsLearningMode(true)
+  }
+
+  const handleQuizClick = (moduleIndex: number, quizIndex: number) => {
+    setSelectedModule(moduleIndex)
+    setSelectedQuiz(quizIndex)
+    setSelectedLesson(null)
     setIsLearningMode(true)
   }
 
@@ -110,6 +120,49 @@ export function CourseDetailPage({ courseId }: CourseDetailPageProps) {
     const module = course.modules[selectedModule]
     if (selectedLesson === null || selectedLesson >= module.lessons.length) return null
     return module.lessons[selectedLesson]
+  }
+
+  const getCurrentQuiz = () => {
+    if (!course || selectedModule >= course.modules.length) return null
+    const module = course.modules[selectedModule]
+    if (selectedQuiz === null || selectedQuiz >= module.quizzes.length) return null
+    return module.quizzes[selectedQuiz]
+  }
+
+  const renderMainContent = () => {
+    if (currentLesson) {
+      return (
+        <Card>
+          <CardHeader>
+            <div className="flex items-center justify-between">
+              <CardTitle className="text-xl">{currentLesson.title}</CardTitle>
+              <Badge variant="outline">
+                Lesson {currentLesson.index}
+              </Badge>
+            </div>
+          </CardHeader>
+          <CardContent>
+            <div className="prose max-w-none">
+              <MarkdownRenderer content={currentLesson.content} />
+            </div>
+          </CardContent>
+        </Card>
+      )
+    }
+    
+    if (currentQuiz) {
+      return (
+        <QuizComponent 
+          quiz={currentQuiz} 
+          onQuizComplete={(quizId, isCorrect) => {
+            console.log(`Quiz ${quizId} completed: ${isCorrect ? 'passed' : 'failed'}`)
+            // Quiz completion status will be updated in backend in future implementation
+          }}
+        />
+      )
+    }
+    
+    return null
   }
 
   if (loading) {
@@ -197,8 +250,9 @@ export function CourseDetailPage({ courseId }: CourseDetailPageProps) {
   }
 
   const currentLesson = getCurrentLesson()
+  const currentQuiz = getCurrentQuiz()
 
-  if (isLearningMode && currentLesson) {
+  if (isLearningMode && (currentLesson || currentQuiz)) {
     // Learning mode - show lesson content
     return (
       <div className="min-h-screen bg-gray-50">
@@ -238,6 +292,9 @@ export function CourseDetailPage({ courseId }: CourseDetailPageProps) {
                   <div className="flex items-center gap-1">
                     <BookOpen className="h-4 w-4" />
                     {course.modules.reduce((total, module) => total + module.lessons.length, 0)} lessons
+                    {course.modules.reduce((total, module) => total + (module.quizzes?.length || 0), 0) > 0 && (
+                      <span>, {course.modules.reduce((total, module) => total + (module.quizzes?.length || 0), 0)} quiz{course.modules.reduce((total, module) => total + (module.quizzes?.length || 0), 0) > 1 ? 'zes' : ''}</span>
+                    )}
                   </div>
                 </div>
               </div>
@@ -247,21 +304,7 @@ export function CourseDetailPage({ courseId }: CourseDetailPageProps) {
           <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
             {/* Main Content */}
             <div className="lg:col-span-2">
-              <Card>
-                <CardHeader>
-                  <div className="flex items-center justify-between">
-                    <CardTitle className="text-xl">{currentLesson.title}</CardTitle>
-                    <Badge variant="outline">
-                      Lesson {currentLesson.index}
-                    </Badge>
-                  </div>
-                </CardHeader>
-                <CardContent>
-                  <div className="prose max-w-none">
-                    <MarkdownRenderer content={currentLesson.content} />
-                  </div>
-                </CardContent>
-              </Card>
+              {renderMainContent()}
             </div>
 
             {/* Sidebar */}
@@ -346,6 +389,36 @@ export function CourseDetailPage({ courseId }: CourseDetailPageProps) {
                                 </div>
                               </button>
                             ))}
+                            
+                            {/* Quiz Section */}
+                            {module.quizzes && module.quizzes.length > 0 && (
+                              <div className="mt-3 pt-3 border-t border-gray-200">
+                                <div className="text-xs font-medium text-gray-500 mb-2 px-2">Quizzes</div>
+                                {module.quizzes.map((quiz, quizIndex) => (
+                                  <button
+                                    key={quiz.id}
+                                    onClick={() => handleQuizClick(moduleIndex, quizIndex)}
+                                    className={`w-full text-left p-2 rounded cursor-pointer transition-colors ${
+                                      selectedQuiz === quizIndex
+                                        ? 'bg-primary/5 border border-primary/10'
+                                        : 'hover:bg-gray-50'
+                                    }`}
+                                  >
+                                    <div className="flex items-center gap-2">
+                                      <div className="flex items-center gap-1">
+                                        <span className="text-xs text-gray-500">
+                                          Q{quizIndex + 1}
+                                        </span>
+                                        {quiz.is_completed && (
+                                          <CheckCircle className="h-3 w-3 text-green-500" />
+                                        )}
+                                      </div>
+                                      <span className="text-sm">Quiz {quizIndex + 1}</span>
+                                    </div>
+                                  </button>
+                                ))}
+                              </div>
+                            )}
                           </div>
                         )}
                       </div>
@@ -431,6 +504,9 @@ export function CourseDetailPage({ courseId }: CourseDetailPageProps) {
                             <h3 className="font-semibold text-lg">{module.title}</h3>
                             <p className="text-sm text-gray-500 mt-1">
                               {module.lessons.length} lessons
+                              {module.quizzes && module.quizzes.length > 0 && (
+                                <span>, {module.quizzes.length} quiz{module.quizzes.length > 1 ? 'zes' : ''}</span>
+                              )}
                             </p>
                           </div>
                           <ChevronRight 
@@ -466,6 +542,38 @@ export function CourseDetailPage({ courseId }: CourseDetailPageProps) {
                               </div>
                             </button>
                           ))}
+                          
+                          {/* Quiz Section */}
+                          {module.quizzes && module.quizzes.length > 0 && (
+                            <div className="bg-blue-50 border-t">
+                              <div className="px-4 py-2 text-sm font-medium text-blue-700 border-b border-blue-200">
+                                Quizzes
+                              </div>
+                              {module.quizzes.map((quiz, quizIndex) => (
+                                <button
+                                  key={quiz.id}
+                                  className="w-full text-left p-4 border-b last:border-b-0 hover:bg-blue-100 transition-colors"
+                                  onClick={() => handleQuizClick(moduleIndex, quizIndex)}
+                                >
+                                  <div className="flex items-center justify-between">
+                                    <div className="flex items-center gap-3">
+                                      <div className="w-8 h-8 rounded-full bg-blue-100 flex items-center justify-center">
+                                        <span className="text-sm font-medium text-blue-700">
+                                          Q{quizIndex + 1}
+                                        </span>
+                                      </div>
+                                      <div>
+                                        <h4 className="font-medium">Quiz {quizIndex + 1}</h4>
+                                      </div>
+                                    </div>
+                                    {quiz.is_completed && (
+                                      <CheckCircle className="h-5 w-5 text-green-500" />
+                                    )}
+                                  </div>
+                                </button>
+                              ))}
+                            </div>
+                          )}
                         </div>
                       )}
                     </div>

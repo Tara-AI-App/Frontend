@@ -56,7 +56,7 @@ function LearningPageComponent() {
     } else if (course.progress > 0) {
       return <Badge variant="secondary">In Progress</Badge>
     } else {
-      return <Badge variant="outline">Not Started</Badge>
+      return null
     }
   }
 

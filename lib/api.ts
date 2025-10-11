@@ -104,6 +104,16 @@ export interface CourseDetail {
   modules: ModuleDetail[]
 }
 
+export interface UserSummary {
+  learning_time_hours: number
+  courses_completed: number
+  total_quiz_completed: number
+  completion_rate: number
+  skills_acquired: string[]
+  learning_path_progress: number
+  total_courses: number
+}
+
 class ApiService {
   private readonly baseURL: string
 
@@ -181,6 +191,10 @@ class ApiService {
 
   async getCurrentUser(): Promise<LoginResponse['user']> {
     return this.request<LoginResponse['user']>('/users/me')
+  }
+
+  async getUserSummary(): Promise<UserSummary> {
+    return this.request<UserSummary>('/users/summary')
   }
 
   // Token management

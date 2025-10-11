@@ -9,17 +9,7 @@ import { Button } from "@/components/ui/button"
 import { useAuth } from "@/contexts/AuthContext"
 import { useState, useEffect, useRef } from "react"
 import { useRouter } from "next/navigation"
-
-// Mock profile stats - in a real app, this would come from API
-const profileStats = {
-  learningTime: 1250, // minutes
-  totalCoursesLearned: 12,
-  skills: ["React", "Node.js", "TypeScript", "Docker", "AWS", "GraphQL"],
-  averageQuizScore: 87.5,
-  medianQuizScore: 89.0,
-  completionRate: 78.3,
-  learningPathProgression: 65.2,
-}
+import { apiService, UserSummary } from "@/lib/api"
 
 const recentAchievements = [
   { title: "Fast Learner", description: "Completed 3 courses this week", icon: TrendingUp },
@@ -32,13 +22,35 @@ export function ProfilePage() {
   const router = useRouter()
   const [showDropdown, setShowDropdown] = useState(false)
   const [showLogoutConfirm, setShowLogoutConfirm] = useState(false)
+  const [userSummary, setUserSummary] = useState<UserSummary | null>(null)
+  const [isLoading, setIsLoading] = useState(true)
+  const [error, setError] = useState<string | null>(null)
   const dropdownRef = useRef<HTMLDivElement>(null)
 
-  const formatTime = (minutes: number) => {
-    const hours = Math.floor(minutes / 60)
-    const mins = minutes % 60
-    return `${hours}h ${mins}m`
+  const formatTime = (hours: number) => {
+    return `${Math.round(hours)}h`
   }
+
+  // Fetch user summary data
+  useEffect(() => {
+    const fetchUserSummary = async () => {
+      try {
+        setIsLoading(true)
+        setError(null)
+        const summary = await apiService.getUserSummary()
+        setUserSummary(summary)
+      } catch (err) {
+        console.error('Failed to fetch user summary:', err)
+        setError(err instanceof Error ? err.message : 'Failed to load user summary')
+      } finally {
+        setIsLoading(false)
+      }
+    }
+
+    if (user) {
+      fetchUserSummary()
+    }
+  }, [user])
 
   const handleLogout = () => {
     logout()
@@ -172,6 +184,18 @@ export function ProfilePage() {
             </div>
           </div>
 
+          {/* Error Display */}
+          {error && (
+            <Card className="border-destructive">
+              <CardContent className="p-4">
+                <div className="flex items-center gap-2 text-destructive">
+                  <div className="h-4 w-4 rounded-full bg-destructive" />
+                  <p className="text-sm">Failed to load dashboard data: {error}</p>
+                </div>
+              </CardContent>
+            </Card>
+          )}
+
           {/* Key Metrics */}
           <div className="grid gap-3 md:gap-4 grid-cols-2 lg:grid-cols-4">
             <Card>
@@ -180,7 +204,9 @@ export function ProfilePage() {
                 <Clock className="h-4 w-4 text-muted-foreground" />
               </CardHeader>
               <CardContent>
-                <div className="text-lg md:text-2xl font-bold">{formatTime(profileStats.learningTime)}</div>
+                <div className="text-lg md:text-2xl font-bold">
+                  {isLoading ? "..." : userSummary ? formatTime(userSummary.learning_time_hours) : "0h 0m"}
+                </div>
                 <p className="text-xs text-muted-foreground">Total time spent learning</p>
               </CardContent>
             </Card>
@@ -191,19 +217,23 @@ export function ProfilePage() {
                 <BookOpen className="h-4 w-4 text-muted-foreground" />
               </CardHeader>
               <CardContent>
-                <div className="text-lg md:text-2xl font-bold">{profileStats.totalCoursesLearned}</div>
+                <div className="text-lg md:text-2xl font-bold">
+                  {isLoading ? "..." : userSummary?.courses_completed || 0}
+                </div>
                 <p className="text-xs text-muted-foreground">Courses successfully finished</p>
               </CardContent>
             </Card>
 
             <Card>
               <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-                <CardTitle className="text-xs md:text-sm font-medium">Average Quiz Score</CardTitle>
+                <CardTitle className="text-xs md:text-sm font-medium">Quizzes Completed</CardTitle>
                 <Target className="h-4 w-4 text-muted-foreground" />
               </CardHeader>
               <CardContent>
-                <div className="text-lg md:text-2xl font-bold">{profileStats.averageQuizScore}%</div>
-                <p className="text-xs text-muted-foreground">Median: {profileStats.medianQuizScore}%</p>
+                <div className="text-lg md:text-2xl font-bold">
+                  {isLoading ? "..." : userSummary?.total_quiz_completed || 0}
+                </div>
+                <p className="text-xs text-muted-foreground">Total quizzes completed</p>
               </CardContent>
             </Card>
 
@@ -213,7 +243,9 @@ export function ProfilePage() {
                 <TrendingUp className="h-4 w-4 text-muted-foreground" />
               </CardHeader>
               <CardContent>
-                <div className="text-lg md:text-2xl font-bold">{profileStats.completionRate}%</div>
+                <div className="text-lg md:text-2xl font-bold">
+                  {isLoading ? "..." : userSummary ? `${userSummary.completion_rate.toFixed(1)}%` : "0%"}
+                </div>
                 <p className="text-xs text-muted-foreground">Course completion rate</p>
               </CardContent>
             </Card>
@@ -227,11 +259,17 @@ export function ProfilePage() {
               </CardHeader>
               <CardContent>
                 <div className="flex flex-wrap gap-2">
-                  {profileStats.skills.map((skill) => (
-                    <Badge key={skill} variant="secondary" className="text-xs">
-                      {skill}
-                    </Badge>
-                  ))}
+                  {isLoading ? (
+                    <div className="text-sm text-muted-foreground">Loading skills...</div>
+                  ) : userSummary?.skills_acquired && userSummary.skills_acquired.length > 0 ? (
+                    userSummary.skills_acquired.map((skill) => (
+                      <Badge key={skill} variant="secondary" className="text-xs">
+                        {skill}
+                      </Badge>
+                    ))
+                  ) : (
+                    <div className="text-sm text-muted-foreground">No skills acquired yet</div>
+                  )}
                 </div>
               </CardContent>
             </Card>
@@ -245,9 +283,14 @@ export function ProfilePage() {
                 <div className="space-y-2">
                   <div className="flex justify-between text-sm">
                     <span>Overall Progress</span>
-                    <span>{profileStats.learningPathProgression}%</span>
+                    <span>
+                      {isLoading ? "..." : userSummary ? `${userSummary.learning_path_progress.toFixed(1)}%` : "0%"}
+                    </span>
                   </div>
-                  <Progress value={profileStats.learningPathProgression} className="h-2" />
+                  <Progress 
+                    value={isLoading ? 0 : userSummary?.learning_path_progress || 0} 
+                    className="h-2" 
+                  />
                 </div>
                 <p className="text-sm text-muted-foreground">You're making great progress on your learning journey!</p>
               </CardContent>

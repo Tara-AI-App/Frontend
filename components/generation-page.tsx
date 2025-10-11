@@ -19,7 +19,7 @@ import {
 import { Card, CardContent } from "@/components/ui/card"
 import { Progress } from "@/components/ui/progress"
 import { Button } from "@/components/ui/button"
-import { apiService } from "@/lib/api"
+import { apiService, OAuthTokenResponse } from "@/lib/api"
 
 const generationSteps = [
   { id: 1, title: "Analyzing company codebase", icon: Code, duration: 2000 },
@@ -40,15 +40,42 @@ function GenerationContent() {
   const [error, setError] = useState<string | null>(null)
   const [generatedCourseId, setGeneratedCourseId] = useState<string | null>(null)
   const [hasStartedGeneration, setHasStartedGeneration] = useState(false)
+  const [oauthTokens, setOauthTokens] = useState<OAuthTokenResponse[]>([])
+  const [tokensLoaded, setTokensLoaded] = useState(false)
   const generationInitiatedRef = useRef(false)
   const apiCallCountRef = useRef(0)
   const componentMountCountRef = useRef(0)
 
   const type = searchParams.get("type") || "course"
   const topic = decodeURIComponent(searchParams.get("topic") || "React Authentication")
-  const githubToken = searchParams.get("github_token") || ""
-  const driveToken = searchParams.get("drive_token") || ""
   const filesParam = searchParams.get("files") || ""
+
+  // Fetch OAuth tokens when component mounts
+  useEffect(() => {
+    const fetchOAuthTokens = async () => {
+      try {
+        const response = await apiService.getOAuthTokens(['github', 'drive'])
+        setOauthTokens(response.tokens)
+        setTokensLoaded(true)
+      } catch (error) {
+        console.error('Failed to fetch OAuth tokens:', error)
+        setOauthTokens([])
+        setTokensLoaded(true)
+      }
+    }
+
+    fetchOAuthTokens()
+    
+    // Fallback timeout to ensure tokensLoaded is set even if API fails
+    const timeout = setTimeout(() => {
+      if (!tokensLoaded) {
+        console.warn('OAuth token fetch timed out, proceeding without tokens')
+        setTokensLoaded(true)
+      }
+    }, 5000) // 5 second timeout
+
+    return () => clearTimeout(timeout)
+  }, [])
 
   const generateCourse = useCallback(async () => {
     // Multiple layers of protection against duplicate calls
@@ -56,6 +83,14 @@ function GenerationContent() {
       console.log("🚫 Course generation blocked - already in progress or completed")
       return
     }
+    
+    // Wait for tokens to be loaded
+    if (!tokensLoaded) {
+      console.log("⏳ Waiting for OAuth tokens to load...")
+      return
+    }
+    
+    console.log("🔑 OAuth tokens loaded:", oauthTokens.length, "tokens found")
     
     generationInitiatedRef.current = true
     apiCallCountRef.current += 1
@@ -75,11 +110,17 @@ function GenerationContent() {
         }
       }
 
+      // Get tokens from the fetched OAuth tokens
+      const githubToken = oauthTokens.find(token => token.provider === 'github')?.access_token || ""
+      const driveToken = oauthTokens.find(token => token.provider === 'drive')?.access_token || ""
+
       console.log("📡 Calling AI course generation API...")
+      console.log("🔑 Tokens:", { github: !!githubToken, drive: !!driveToken })
+      
       // Call the AI course generation API
       const response = await apiService.generateCourse({
         token_github: githubToken,
-        token_drive: driveToken,
+        token_drive: driveToken || "no_drive_token", // Provide fallback to prevent 422 error
         prompt: topic, // topic is now properly decoded
         files_url: filesUrl
       })
@@ -110,11 +151,11 @@ function GenerationContent() {
       }
       
       setError(errorMessage)
-      generationInitiatedRef.current = false // Reset on error to allow retry
+      // Don't reset generationInitiatedRef on error to prevent automatic retries
     } finally {
       setIsGenerating(false)
     }
-  }, [isGenerating, generatedCourseId, filesParam, githubToken, driveToken, topic, router])
+  }, [isGenerating, generatedCourseId, filesParam, topic, router, oauthTokens, tokensLoaded])
 
   useEffect(() => {
     componentMountCountRef.current += 1
@@ -155,8 +196,8 @@ function GenerationContent() {
           } else {
             // All steps completed, now generate the actual course if type is "course"
             if (type === "course") {
-              console.log("📚 All visual steps completed, calling generateCourse...")
-              generateCourse()
+              console.log("📚 All visual steps completed, waiting for tokens to be ready...")
+              // Don't call generateCourse here - let the useEffect handle it when tokens are ready
             } else {
               // For guides, redirect to mock content
               setTimeout(() => {
@@ -170,7 +211,18 @@ function GenerationContent() {
     }
 
     processStep()
-  }, [type, topic, router, hasStartedGeneration, generateCourse])
+  }, [type, topic, router, hasStartedGeneration])
+
+  // Separate useEffect to trigger course generation when tokens are ready and visual steps are complete
+  useEffect(() => {
+    if (type === "course" && tokensLoaded && hasStartedGeneration && !isGenerating && !generatedCourseId && !error) {
+      // Check if all visual steps are completed (progress is 100%)
+      if (progress >= 100) {
+        console.log("🎯 All conditions met: tokens loaded, visual steps complete, calling generateCourse...")
+        generateCourse()
+      }
+    }
+  }, [type, tokensLoaded, hasStartedGeneration, isGenerating, generatedCourseId, progress, error])
 
   return (
     <div className="min-h-[calc(100vh-4rem)] flex items-center justify-center p-4 md:p-8">

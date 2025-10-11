@@ -168,15 +168,12 @@ export function AskTaraPage() {
       console.log("🔄 Redirecting to generation page...")
       const encodedMessage = encodeURIComponent(message)
       const encodedFiles = uploadedFiles.length > 0 ? encodeURIComponent(JSON.stringify(uploadedFiles)) : ""
-      const githubToken = oauthTokens.find(token => token.provider === 'github')?.access_token || ""
-      const driveToken = oauthTokens.find(token => token.provider === 'drive')?.access_token || ""
       
-      // Pass all necessary data to the generation page
+      // Pass only non-sensitive data to the generation page
+      // OAuth tokens will be fetched securely from the API
       const params = new URLSearchParams({
         type: selectedType,
         topic: encodedMessage,
-        github_token: githubToken,
-        drive_token: driveToken,
         ...(encodedFiles && { files: encodedFiles })
       })
       

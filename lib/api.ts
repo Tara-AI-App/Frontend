@@ -114,6 +114,21 @@ export interface UserSummary {
   total_courses: number
 }
 
+export interface GuideListItem {
+  id: string
+  title: string
+  description?: string
+  content: string
+  source_from?: string[]
+  created_at: string
+  updated_at: string
+}
+
+export interface GuideListResponse {
+  guides: GuideListItem[]
+  total: number
+}
+
 class ApiService {
   private readonly baseURL: string
 
@@ -294,6 +309,24 @@ class ApiService {
       method: 'POST',
       body: JSON.stringify(request),
     })
+  }
+
+  // AI Guide Generation
+  async generateGuide(request: {
+    token_github: string
+    token_drive: string
+    prompt: string
+    files_url?: string
+  }): Promise<{ guide_id: string }> {
+    return this.request<{ guide_id: string }>('/ai/guide/generate', {
+      method: 'POST',
+      body: JSON.stringify(request),
+    })
+  }
+
+  // Guide methods
+  async getGuides(): Promise<GuideListResponse> {
+    return this.request<GuideListResponse>('/ai/guide/')
   }
 
   // Test method to verify API connection

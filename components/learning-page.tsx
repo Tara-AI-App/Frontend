@@ -7,15 +7,24 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Badge } from "@/components/ui/badge"
 import { Progress } from "@/components/ui/progress"
 import { apiService, CourseListItem } from "@/lib/api"
+import { GuideListSection } from "@/components/guide-list-section"
+import { useAuth } from "@/contexts/AuthContext"
 
 function LearningPageComponent() {
   const [courses, setCourses] = useState<CourseListItem[]>([])
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
+  const { isAuthenticated, isLoading: authLoading } = useAuth()
 
   useEffect(() => {
-    // Only run on client side
-    if (typeof window === 'undefined') {
+    // Only run on client side and when authentication is loaded
+    if (typeof window === 'undefined' || authLoading) {
+      return
+    }
+
+    // Don't fetch if user is not authenticated
+    if (!isAuthenticated) {
+      setLoading(false)
       return
     }
 
@@ -35,7 +44,7 @@ function LearningPageComponent() {
     }
 
     fetchCourses()
-  }, [])
+  }, [isAuthenticated, authLoading])
 
   const formatDuration = (hours?: number) => {
     if (!hours) return "Duration not specified"
@@ -110,6 +119,28 @@ function LearningPageComponent() {
     )
   }
 
+  if (!isAuthenticated) {
+    return (
+      <div className="min-h-[calc(100vh-4rem)]">
+        <div className="p-3 md:p-6">
+          <div className="mx-auto max-w-7xl">
+            <div className="flex items-center justify-center min-h-[400px]">
+              <Card className="w-full max-w-md">
+                <CardContent className="flex flex-col items-center justify-center p-8 text-center">
+                  <BookOpen className="h-12 w-12 text-muted-foreground mb-4" />
+                  <h3 className="text-lg font-semibold mb-2">Please Log In</h3>
+                  <p className="text-sm text-muted-foreground mb-4">
+                    You need to be authenticated to access your learning content
+                  </p>
+                </CardContent>
+              </Card>
+            </div>
+          </div>
+        </div>
+      </div>
+    )
+  }
+
   if (error) {
     return (
       <div className="min-h-[calc(100vh-4rem)]">
@@ -144,10 +175,7 @@ function LearningPageComponent() {
             <div>
               <h2 className="text-xl md:text-2xl font-bold">Your Learning Journey</h2>
               <p className="text-sm md:text-base text-muted-foreground">
-                {courses.length > 0 
-                  ? `Continue where you left off or explore new topics (${courses.length} courses)`
-                  : "No courses available yet"
-                }
+                Continue where you left off or explore new topics
               </p>
             </div>
             <div className="flex gap-2">
@@ -160,97 +188,108 @@ function LearningPageComponent() {
             </div>
           </div>
 
-          {courses.length === 0 ? (
-            <div className="flex items-center justify-center min-h-[400px]">
-              <Card className="w-full max-w-md">
-                <CardContent className="flex flex-col items-center justify-center p-8 text-center">
-                  <BookOpen className="h-12 w-12 text-muted-foreground mb-4" />
-                  <h3 className="text-lg font-semibold mb-2">No Courses Yet</h3>
-                  <p className="text-sm text-muted-foreground mb-4">
-                    You don't have any courses yet. Generate some courses to get started!
-                  </p>
+          {/* Courses Section */}
+          <div className="space-y-4">
+            <div className="flex items-center gap-2">
+              <BookOpen className="h-5 w-5 text-blue-600" />
+              <h3 className="text-lg font-semibold">Your Courses ({courses.length})</h3>
+            </div>
+            
+            {courses.length === 0 ? (
+              <Card>
+                <CardContent className="flex items-center justify-center py-8">
+                  <div className="text-center">
+                    <BookOpen className="h-8 w-8 text-muted-foreground mx-auto mb-2" />
+                    <p className="text-sm text-muted-foreground mb-2">No courses available yet</p>
+                    <p className="text-xs text-muted-foreground">
+                      Generate your first course to get started with learning
+                    </p>
+                  </div>
                 </CardContent>
               </Card>
-            </div>
-          ) : (
-            <div className="grid gap-3 md:gap-4 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
-              {courses.map((course) => (
-                <Card key={course.id} className="hover:shadow-md transition-shadow">
-                  <CardHeader className="pb-3">
-                    <div className="flex items-start justify-between">
-                      <div className="flex items-center gap-2">
-                        <BookOpen className="h-4 w-4 text-primary" />
-                        {getStatusBadge(course)}
+            ) : (
+              <div className="grid gap-3 md:gap-4 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
+                {courses.map((course) => (
+                  <Card key={course.id} className="hover:shadow-md transition-shadow">
+                    <CardHeader className="pb-3">
+                      <div className="flex items-start justify-between">
+                        <div className="flex items-center gap-2">
+                          <BookOpen className="h-4 w-4 text-primary" />
+                          {getStatusBadge(course)}
+                        </div>
+                        {course.is_completed && <CheckCircle className="h-5 w-5 text-green-600" />}
                       </div>
-                      {course.is_completed && <CheckCircle className="h-5 w-5 text-green-600" />}
-                    </div>
-                    <CardTitle className="text-base md:text-lg leading-tight">{course.title}</CardTitle>
-                    {course.description && (
-                      <p className="text-sm text-muted-foreground line-clamp-2">
-                        {course.description}
-                      </p>
-                    )}
-                  </CardHeader>
-
-                  <CardContent className="space-y-4">
-                    <div className="flex flex-wrap gap-1">
-                      {getDifficultyBadge(course.difficulty)}
-                      {course.learning_objectives && course.learning_objectives.length > 0 && (
-                        <Badge variant="outline" className="text-xs">
-                          {course.learning_objectives.length} objectives
-                        </Badge>
+                      <CardTitle className="text-base md:text-lg leading-tight">{course.title}</CardTitle>
+                      {course.description && (
+                        <p className="text-sm text-muted-foreground line-clamp-2">
+                          {course.description}
+                        </p>
                       )}
-                    </div>
+                    </CardHeader>
 
-                    <div className="space-y-2">
-                      <div className="flex justify-between text-sm">
-                        <span>Progress</span>
-                        <span>{Math.round(course.progress)}%</span>
+                    <CardContent className="space-y-4">
+                      <div className="flex flex-wrap gap-1">
+                        {getDifficultyBadge(course.difficulty)}
+                        {course.learning_objectives && course.learning_objectives.length > 0 && (
+                          <Badge variant="outline" className="text-xs">
+                            {course.learning_objectives.length} objectives
+                          </Badge>
+                        )}
                       </div>
-                      <Progress value={course.progress} className="h-2" />
-                      <div className="flex justify-between text-xs text-muted-foreground">
-                        <span>{formatDuration(course.estimated_duration)}</span>
-                        <span>
-                          {course.is_completed ? "Completed" : "In Progress"}
+
+                      <div className="space-y-2">
+                        <div className="flex justify-between text-sm">
+                          <span>Progress</span>
+                          <span>{Math.round(course.progress)}%</span>
+                        </div>
+                        <Progress value={course.progress} className="h-2" />
+                        <div className="flex justify-between text-xs text-muted-foreground">
+                          <span>{formatDuration(course.estimated_duration)}</span>
+                          <span>
+                            {course.is_completed ? "Completed" : "In Progress"}
+                          </span>
+                        </div>
+                      </div>
+
+                      <div className="flex items-center gap-2 text-xs text-muted-foreground">
+                        <Clock className="h-3 w-3" />
+                        <span className="truncate">
+                          Updated: {new Date(course.updated_at).toLocaleDateString()}
                         </span>
                       </div>
-                    </div>
 
-                    <div className="flex items-center gap-2 text-xs text-muted-foreground">
-                      <Clock className="h-3 w-3" />
-                      <span className="truncate">
-                        Updated: {new Date(course.updated_at).toLocaleDateString()}
-                      </span>
-                    </div>
+                      <Button
+                        className="w-full text-sm"
+                        size="sm"
+                        variant={course.is_completed ? "outline" : "default"}
+                        onClick={() => {
+                          window.location.href = `/course/${course.id}`
+                        }}
+                      >
+                        {(() => {
+                          if (course.is_completed) {
+                            return "Review"
+                          }
+                          if (course.progress === 0) {
+                            return (
+                              <>
+                                <Play className="h-4 w-4 mr-2" />
+                                Start
+                              </>
+                            )
+                          }
+                          return "Continue"
+                        })()}
+                      </Button>
+                    </CardContent>
+                  </Card>
+                ))}
+              </div>
+            )}
+          </div>
 
-                    <Button
-                      className="w-full text-sm"
-                      size="sm"
-                      variant={course.is_completed ? "outline" : "default"}
-                      onClick={() => {
-                        window.location.href = `/course/${course.id}`
-                      }}
-                    >
-                      {(() => {
-                        if (course.is_completed) {
-                          return "Review"
-                        }
-                        if (course.progress === 0) {
-                          return (
-                            <>
-                              <Play className="h-4 w-4 mr-2" />
-                              Start
-                            </>
-                          )
-                        }
-                        return "Continue"
-                      })()}
-                    </Button>
-                  </CardContent>
-                </Card>
-              ))}
-            </div>
-          )}
+          {/* Guides Section */}
+          <GuideListSection />
         </div>
       </div>
     </div>

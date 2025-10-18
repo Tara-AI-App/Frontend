@@ -39,6 +39,7 @@ function GenerationContent() {
   const [isGenerating, setIsGenerating] = useState(false)
   const [error, setError] = useState<string | null>(null)
   const [generatedCourseId, setGeneratedCourseId] = useState<string | null>(null)
+  const [generatedGuideId, setGeneratedGuideId] = useState<string | null>(null)
   const [hasStartedGeneration, setHasStartedGeneration] = useState(false)
   const [oauthTokens, setOauthTokens] = useState<OAuthTokenResponse[]>([])
   const [tokensLoaded, setTokensLoaded] = useState(false)
@@ -157,6 +158,86 @@ function GenerationContent() {
     }
   }, [isGenerating, generatedCourseId, filesParam, topic, router, oauthTokens, tokensLoaded])
 
+  const generateGuide = useCallback(async () => {
+    // Multiple layers of protection against duplicate calls
+    if (isGenerating || generatedGuideId || generationInitiatedRef.current) {
+      console.log("🚫 Guide generation blocked - already in progress or completed")
+      return
+    }
+    
+    // Wait for tokens to be loaded
+    if (!tokensLoaded) {
+      console.log("⏳ Waiting for OAuth tokens to load...")
+      return
+    }
+    
+    console.log("🔑 OAuth tokens loaded:", oauthTokens.length, "tokens found")
+    
+    generationInitiatedRef.current = true
+    apiCallCountRef.current += 1
+    
+    console.log(`🚀 Starting guide generation (call #${apiCallCountRef.current})`)
+    setIsGenerating(true)
+    
+    try {
+      // Parse uploaded files if any
+      let filesUrl: string | undefined
+      if (filesParam) {
+        try {
+          const files = JSON.parse(decodeURIComponent(filesParam))
+          filesUrl = files.map((f: any) => f.url || f.name).join(',')
+        } catch (e) {
+          console.warn("Failed to parse files parameter:", e)
+        }
+      }
+
+      // Get tokens from the fetched OAuth tokens
+      const githubToken = oauthTokens.find(token => token.provider === 'github')?.access_token || ""
+      const driveToken = oauthTokens.find(token => token.provider === 'drive')?.access_token || ""
+
+      console.log("📡 Calling AI guide generation API...")
+      console.log("🔑 Tokens:", { github: !!githubToken, drive: !!driveToken })
+      
+      // Call the AI guide generation API
+      const response = await apiService.generateGuide({
+        token_github: githubToken,
+        token_drive: driveToken || "no_drive_token", // Provide fallback to prevent 422 error
+        prompt: topic, // topic is now properly decoded
+        files_url: filesUrl
+      })
+
+      console.log("✅ Guide generated successfully:", response.guide_id)
+      setGeneratedGuideId(response.guide_id)
+      
+      // Redirect to guide detail page after a short delay
+      setTimeout(() => {
+        console.log("🔄 Redirecting to guide detail page...")
+        router.push(`/guide/${response.guide_id}`)
+      }, 1000)
+      
+    } catch (error) {
+      console.error("❌ Failed to generate guide:", error)
+      let errorMessage = 'Unknown error occurred'
+      
+      if (error instanceof Error) {
+        if (error.message.includes('Request timeout')) {
+          errorMessage = 'Guide generation is taking longer than expected. The AI service may be busy. Please try again in a few minutes.'
+        } else if (error.message.includes('Network error')) {
+          errorMessage = 'Unable to connect to the server. Please check your internet connection and try again.'
+        } else if (error.message.includes('timed out')) {
+          errorMessage = 'The AI service took too long to respond. This can happen with complex guide generation. Please try again.'
+        } else {
+          errorMessage = error.message
+        }
+      }
+      
+      setError(errorMessage)
+      // Don't reset generationInitiatedRef on error to prevent automatic retries
+    } finally {
+      setIsGenerating(false)
+    }
+  }, [isGenerating, generatedGuideId, filesParam, topic, router, oauthTokens, tokensLoaded])
+
   useEffect(() => {
     componentMountCountRef.current += 1
     console.log(`🔄 GenerationContent component mounted (mount #${componentMountCountRef.current})`)
@@ -199,11 +280,8 @@ function GenerationContent() {
               console.log("📚 All visual steps completed, waiting for tokens to be ready...")
               // Don't call generateCourse here - let the useEffect handle it when tokens are ready
             } else {
-              // For guides, redirect to mock content
-              setTimeout(() => {
-                const contentId = crypto.randomUUID().substring(0, 9)
-                router.push(`/${type}/${contentId}?topic=${encodeURIComponent(topic)}`)
-              }, 1000)
+              // For guides, wait for tokens to be ready and then generate
+              console.log("📖 All visual steps completed for guide, waiting for tokens to be ready...")
             }
           }
         }, step.duration)
@@ -213,16 +291,21 @@ function GenerationContent() {
     processStep()
   }, [type, topic, router, hasStartedGeneration])
 
-  // Separate useEffect to trigger course generation when tokens are ready and visual steps are complete
+  // Separate useEffect to trigger generation when tokens are ready and visual steps are complete
   useEffect(() => {
-    if (type === "course" && tokensLoaded && hasStartedGeneration && !isGenerating && !generatedCourseId && !error) {
+    if (tokensLoaded && hasStartedGeneration && !isGenerating && !error) {
       // Check if all visual steps are completed (progress is 100%)
       if (progress >= 100) {
-        console.log("🎯 All conditions met: tokens loaded, visual steps complete, calling generateCourse...")
-        generateCourse()
+        if (type === "course" && !generatedCourseId) {
+          console.log("🎯 All conditions met: tokens loaded, visual steps complete, calling generateCourse...")
+          generateCourse()
+        } else if (type === "guide" && !generatedGuideId) {
+          console.log("🎯 All conditions met: tokens loaded, visual steps complete, calling generateGuide...")
+          generateGuide()
+        }
       }
     }
-  }, [type, tokensLoaded, hasStartedGeneration, isGenerating, generatedCourseId, progress, error])
+  }, [type, tokensLoaded, hasStartedGeneration, isGenerating, generatedCourseId, generatedGuideId, progress, error, generateCourse, generateGuide])
 
   return (
     <div className="min-h-[calc(100vh-4rem)] flex items-center justify-center p-4 md:p-8">
@@ -235,13 +318,16 @@ function GenerationContent() {
               </div>
             </div>
             <h2 className="text-xl md:text-2xl font-bold mb-2">
-              {error ? "Generation Failed" : generatedCourseId ? "Course Generated!" : isGenerating ? "Generating Course..." : `Creating Your ${type === "course" ? "Course" : "Guide"}`}
+              {error ? "Generation Failed" : 
+               (generatedCourseId || generatedGuideId) ? `${type === "course" ? "Course" : "Guide"} Generated!` : 
+               isGenerating ? `Generating ${type === "course" ? "Course" : "Guide"}...` : 
+               `Creating Your ${type === "course" ? "Course" : "Guide"}`}
             </h2>
             <p className="text-muted-foreground mb-2 text-sm md:text-base font-medium">"{topic}"</p>
             <p className="text-xs md:text-sm text-muted-foreground px-4">
-              {error ? "There was an error generating your course. Please try again." : 
-               generatedCourseId ? "Your course has been successfully generated!" :
-               isGenerating ? "Calling AI service to generate your course..." :
+              {error ? `There was an error generating your ${type}. Please try again.` : 
+               (generatedCourseId || generatedGuideId) ? `Your ${type} has been successfully generated!` :
+               isGenerating ? `Calling AI service to generate your ${type}...` :
                "Tara is analyzing your company's resources to create personalized content"}
             </p>
           </div>
@@ -263,9 +349,9 @@ function GenerationContent() {
               <div className="space-y-2">
                 <div className="flex justify-between text-sm">
                   <span>Overall Progress</span>
-                  <span>{generatedCourseId ? "100%" : isGenerating ? "Generating..." : `${Math.round(progress)}%`}</span>
+                  <span>{(generatedCourseId || generatedGuideId) ? "100%" : isGenerating ? "Generating..." : `${Math.round(progress)}%`}</span>
                 </div>
-                <Progress value={generatedCourseId ? 100 : progress} className="h-3" />
+                <Progress value={(generatedCourseId || generatedGuideId) ? 100 : progress} className="h-3" />
               </div>
             )}
 
@@ -313,13 +399,13 @@ function GenerationContent() {
                 </div>
               ))}
               
-              {/* Show course generation step if type is course */}
-              {type === "course" && (
+              {/* Show generation step for both course and guide */}
+              {(type === "course" || type === "guide") && (
                 <div
                   className={`flex items-center gap-3 p-3 rounded-lg transition-all ${
                     isGenerating
                       ? "bg-primary/10 border border-primary/20"
-                      : generatedCourseId
+                      : (generatedCourseId || generatedGuideId)
                         ? "bg-green-50 border border-green-200"
                         : error
                           ? "bg-red-50 border border-red-200"
@@ -328,7 +414,7 @@ function GenerationContent() {
                 >
                   <div
                     className={`flex h-8 w-8 items-center justify-center rounded-full ${
-                      generatedCourseId
+                      (generatedCourseId || generatedGuideId)
                         ? "bg-green-600 text-white"
                         : isGenerating
                           ? "bg-primary text-primary-foreground"
@@ -337,7 +423,7 @@ function GenerationContent() {
                             : "bg-muted text-muted-foreground"
                     }`}
                   >
-                    {generatedCourseId ? (
+                    {(generatedCourseId || generatedGuideId) ? (
                       <CheckCircle className="h-4 w-4" />
                     ) : isGenerating ? (
                       <Loader2 className="h-4 w-4 animate-spin" />
@@ -351,17 +437,17 @@ function GenerationContent() {
                     className={`font-medium text-sm md:text-base flex-1 ${
                       isGenerating
                         ? "text-primary"
-                        : generatedCourseId
+                        : (generatedCourseId || generatedGuideId)
                           ? "text-green-700"
                           : error
                             ? "text-red-700"
                             : "text-muted-foreground"
                     }`}
                   >
-                    {generatedCourseId ? "Course generated successfully!" : 
-                     isGenerating ? "Generating course with AI... (this may take up to 2 minutes)" :
-                     error ? "Course generation failed" :
-                     "Ready to generate course"}
+                    {(generatedCourseId || generatedGuideId) ? `${type === "course" ? "Course" : "Guide"} generated successfully!` : 
+                     isGenerating ? `Generating ${type} with AI... (this may take up to 2 minutes)` :
+                     error ? `${type === "course" ? "Course" : "Guide"} generation failed` :
+                     `Ready to generate ${type}`}
                   </span>
                   {isGenerating && <Loader2 className="h-4 w-4 animate-spin text-purple-600" />}
                 </div>
@@ -376,7 +462,11 @@ function GenerationContent() {
                   onClick={() => {
                     setError(null)
                     generationInitiatedRef.current = false
-                    generateCourse()
+                    if (type === "course") {
+                      generateCourse()
+                    } else if (type === "guide") {
+                      generateGuide()
+                    }
                   }}
                   variant="outline"
                   className="gap-2"

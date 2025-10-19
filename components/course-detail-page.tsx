@@ -8,9 +8,10 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Badge } from "@/components/ui/badge"
 import { Progress } from "@/components/ui/progress"
 import { MarkdownRenderer } from "@/components/markdown-renderer"
-import { TaraChatbot } from "@/components/tara-chatbot"
+import { CourseChatbot } from "@/components/course-chatbot"
 import { QuizComponent } from "@/components/quiz-component"
 import { apiService, CourseDetail } from "@/lib/api"
+import { useAuth } from "@/contexts/AuthContext"
 
 interface CourseDetailPageProps {
   readonly courseId: string
@@ -18,6 +19,7 @@ interface CourseDetailPageProps {
 
 export function CourseDetailPage({ courseId }: CourseDetailPageProps) {
   const router = useRouter()
+  const { isAuthenticated, isLoading: authLoading } = useAuth()
   const [course, setCourse] = useState<CourseDetail | null>(null)
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
@@ -31,6 +33,18 @@ export function CourseDetailPage({ courseId }: CourseDetailPageProps) {
   useEffect(() => {
     // Only run on client side
     if (typeof window === 'undefined') {
+      return
+    }
+
+    // Don't fetch course data if still checking authentication
+    if (authLoading) {
+      return
+    }
+
+    // Don't fetch course data if not authenticated
+    if (!isAuthenticated) {
+      setLoading(false)
+      setError("Authentication required to access course content")
       return
     }
 
@@ -50,7 +64,7 @@ export function CourseDetailPage({ courseId }: CourseDetailPageProps) {
     }
 
     fetchCourse()
-  }, [courseId])
+  }, [courseId, isAuthenticated, authLoading])
 
   const formatDuration = (hours?: number) => {
     if (!hours) return "Duration not specified"
@@ -320,26 +334,50 @@ export function CourseDetailPage({ courseId }: CourseDetailPageProps) {
     return null
   }
 
-  if (loading) {
+  // Show loading state while checking authentication or fetching course
+  if (authLoading || loading) {
     return (
       <div className="min-h-screen bg-gray-50">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
-          <div className="animate-pulse">
-            <div className="h-8 bg-gray-200 rounded w-1/4 mb-4"></div>
-            <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
-              <div className="lg:col-span-2 space-y-6">
-                <div className="h-64 bg-gray-200 rounded"></div>
-                <div className="space-y-4">
-                  <div className="h-6 bg-gray-200 rounded w-3/4"></div>
-                  <div className="h-4 bg-gray-200 rounded w-full"></div>
-                  <div className="h-4 bg-gray-200 rounded w-2/3"></div>
-                </div>
-              </div>
-              <div className="space-y-6">
-                <div className="h-48 bg-gray-200 rounded"></div>
-                <div className="h-32 bg-gray-200 rounded"></div>
-              </div>
-            </div>
+          <div className="flex items-center justify-center min-h-[400px]">
+            <Card className="w-full max-w-md">
+              <CardContent className="flex flex-col items-center justify-center p-8 text-center">
+                <div className="h-8 w-8 border-4 border-primary border-t-transparent rounded-full animate-spin mb-4"></div>
+                <h3 className="text-lg font-semibold mb-2">
+                  {authLoading ? "Checking Authentication" : "Loading Course"}
+                </h3>
+                <p className="text-sm text-muted-foreground">
+                  {authLoading ? "Please wait while we verify your access..." : "Please wait while we fetch the course details..."}
+                </p>
+              </CardContent>
+            </Card>
+          </div>
+        </div>
+      </div>
+    )
+  }
+
+  // Show authentication error if not authenticated
+  if (!isAuthenticated) {
+    return (
+      <div className="min-h-screen bg-gray-50">
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
+          <div className="flex items-center justify-center min-h-[400px]">
+            <Card className="w-full max-w-md">
+              <CardContent className="flex flex-col items-center justify-center p-8 text-center">
+                <AlertCircle className="h-12 w-12 text-red-500 mb-4" />
+                <h3 className="text-lg font-semibold mb-2">Authentication Required</h3>
+                <p className="text-sm text-muted-foreground mb-4">
+                  You need to be logged in to access course content.
+                </p>
+                <Button 
+                  onClick={() => router.push('/login')} 
+                  variant="default"
+                >
+                  Go to Login
+                </Button>
+              </CardContent>
+            </Card>
           </div>
         </div>
       </div>
@@ -608,10 +646,12 @@ export function CourseDetailPage({ courseId }: CourseDetailPageProps) {
             </div>
           </div>
 
-          {/* Tara Chatbot */}
-          <div className="mt-8">
-            <TaraChatbot />
-          </div>
+          {/* Course AI Chat */}
+          <CourseChatbot 
+            courseId={courseId} 
+            courseTitle={course?.title} 
+            context="course" 
+          />
         </div>
       </div>
     )
@@ -869,10 +909,12 @@ export function CourseDetailPage({ courseId }: CourseDetailPageProps) {
           </div>
         </div>
 
-        {/* Tara Chatbot */}
-        <div className="mt-8">
-          <TaraChatbot />
-        </div>
+        {/* Course AI Chat */}
+        <CourseChatbot 
+          courseId={courseId} 
+          courseTitle={course?.title} 
+          context="course" 
+        />
       </div>
     </div>
   )

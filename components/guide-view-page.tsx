@@ -9,7 +9,7 @@ import { Badge } from "@/components/ui/badge"
 import { Separator } from "@/components/ui/separator"
 import { Alert, AlertDescription } from "@/components/ui/alert"
 import { MarkdownRenderer } from "@/components/markdown-renderer"
-import { TaraChatbot } from "@/components/tara-chatbot"
+import { CourseChatbot } from "@/components/course-chatbot"
 import { apiService, GuideDetailResponse } from "@/lib/api"
 
 interface GuideViewPageProps {
@@ -205,8 +205,12 @@ function GuideViewContent({ guideId }: GuideViewPageProps) {
         </div>
       </div>
 
-      {/* Tara Chatbot */}
-      <TaraChatbot context="guide" />
+      {/* Guide AI Chat */}
+      <CourseChatbot 
+        guideId={guideId} 
+        guideTitle={guideData?.title} 
+        context="guide" 
+      />
     </div>
   )
 }

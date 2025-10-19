@@ -139,6 +139,27 @@ export interface GuideDetailResponse {
   updated_at: string
 }
 
+// Chat interfaces
+export interface CourseChatRequest {
+  message: string
+}
+
+export interface CourseChatResponse {
+  response: string
+  session_id: string
+  timestamp: string
+}
+
+export interface GuideChatRequest {
+  message: string
+}
+
+export interface GuideChatResponse {
+  response: string
+  session_id: string
+  timestamp: string
+}
+
 class ApiService {
   private readonly baseURL: string
 
@@ -376,6 +397,21 @@ class ApiService {
     } catch {
       return false
     }
+  }
+
+  // Chat methods
+  async chatWithCourse(courseId: string, chatRequest: CourseChatRequest): Promise<CourseChatResponse> {
+    return this.request<CourseChatResponse>(`/ai/chat/course/${courseId}`, {
+      method: 'POST',
+      body: JSON.stringify(chatRequest),
+    })
+  }
+
+  async chatWithGuide(guideId: string, chatRequest: GuideChatRequest): Promise<GuideChatResponse> {
+    return this.request<GuideChatResponse>(`/ai/chat/guide/${guideId}`, {
+      method: 'POST',
+      body: JSON.stringify(chatRequest),
+    })
   }
 }
 

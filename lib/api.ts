@@ -129,6 +129,16 @@ export interface GuideListResponse {
   total: number
 }
 
+export interface GuideDetailResponse {
+  id: string
+  title: string
+  description?: string
+  content: string
+  source_from?: string[]
+  created_at: string
+  updated_at: string
+}
+
 class ApiService {
   private readonly baseURL: string
 
@@ -326,7 +336,11 @@ class ApiService {
 
   // Guide methods
   async getGuides(): Promise<GuideListResponse> {
-    return this.request<GuideListResponse>('/ai/guide/')
+    return this.request<GuideListResponse>('/guide/')
+  }
+
+  async getGuideById(guideId: string): Promise<GuideDetailResponse> {
+    return this.request<GuideDetailResponse>(`/guide/${guideId}`)
   }
 
   // Test method to verify API connection

@@ -1,10 +1,23 @@
 import type React from "react"
+import type { Metadata } from "next"
 import { ThemeProvider } from "@/components/theme-provider"
 import { ConditionalNavbar } from "@/components/conditional-navbar"
 import { AuthProvider } from "@/contexts/AuthContext"
 import { LocaleProvider } from "@/contexts/LocaleContext"
 import { RouteGuard } from "@/components/route-guard"
 import "./globals.css"
+
+export const metadata: Metadata = {
+  title: "Tara - AI Learning Assistant",
+  description: "Your AI-powered learning companion",
+  icons: {
+    icon: [
+      { url: "/tara-logo.png" },
+      { url: "/icon.png", sizes: "32x32", type: "image/png" },
+    ],
+    apple: "/tara-logo.png",
+  },
+}
 
 export default function RootLayout({
   children,

@@ -57,7 +57,7 @@ export interface CourseListResponse {
 
 export interface QuizDetail {
   id: string
-  questions: Array<{
+  questions?: Array<{
     question: string
     choices: string[]
     answer: string

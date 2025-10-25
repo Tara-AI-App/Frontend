@@ -2,6 +2,7 @@ import type React from "react"
 import { ThemeProvider } from "@/components/theme-provider"
 import { ConditionalNavbar } from "@/components/conditional-navbar"
 import { AuthProvider } from "@/contexts/AuthContext"
+import { LocaleProvider } from "@/contexts/LocaleContext"
 import { RouteGuard } from "@/components/route-guard"
 import "./globals.css"
 
@@ -27,14 +28,16 @@ export default function RootLayout({
       </head>
       <body suppressHydrationWarning>
         <ThemeProvider attribute="class" defaultTheme="light" enableSystem disableTransitionOnChange>
-          <AuthProvider>
-            <RouteGuard>
-              <div className="min-h-screen flex flex-col">
-                <ConditionalNavbar />
-                <main className="flex-1">{children}</main>
-              </div>
-            </RouteGuard>
-          </AuthProvider>
+          <LocaleProvider>
+            <AuthProvider>
+              <RouteGuard>
+                <div className="min-h-screen flex flex-col">
+                  <ConditionalNavbar />
+                  <main className="flex-1">{children}</main>
+                </div>
+              </RouteGuard>
+            </AuthProvider>
+          </LocaleProvider>
         </ThemeProvider>
       </body>
     </html>

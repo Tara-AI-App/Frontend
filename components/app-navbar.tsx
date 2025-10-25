@@ -11,31 +11,34 @@ import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar"
 import { Badge } from "@/components/ui/badge"
 import { cn } from "@/lib/utils"
 import { useAuth } from "@/contexts/AuthContext"
-
-const menuItems = [
-  {
-    title: "Ask Tara",
-    url: "/",
-    icon: MessageSquare,
-  },
-  {
-    title: "My Learning",
-    url: "/learning",
-    icon: BookOpen,
-  },
-  {
-    title: "Profile",
-    url: "/profile",
-    icon: User,
-  },
-]
+import { useLocale } from "@/contexts/LocaleContext"
+import { LanguageToggle } from "@/components/language-toggle"
 
 export function AppNavbar() {
   const pathname = usePathname()
   const [isOpen, setIsOpen] = useState(false)
   const [showUserDropdown, setShowUserDropdown] = useState(false)
   const { user, isAuthenticated, isLoading, logout } = useAuth()
+  const { t } = useLocale()
   const userDropdownRef = useRef<HTMLDivElement>(null)
+
+  const menuItems = [
+    {
+      title: t("nav.askTara"),
+      url: "/",
+      icon: MessageSquare,
+    },
+    {
+      title: t("nav.myLearning"),
+      url: "/learning",
+      icon: BookOpen,
+    },
+    {
+      title: t("nav.profile"),
+      url: "/profile",
+      icon: User,
+    },
+  ]
 
   // Helper function to render user section
   const renderUserSection = () => {
@@ -91,7 +94,7 @@ export function AppNavbar() {
                   className="flex items-center gap-2 w-full px-4 py-2 text-sm text-foreground hover:bg-accent hover:text-accent-foreground"
                 >
                   <User className="h-4 w-4" />
-                  Profile
+                  {t("nav.profile")}
                 </Link>
                 <button
                   onClick={() => {
@@ -101,7 +104,7 @@ export function AppNavbar() {
                   className="flex items-center gap-2 w-full px-4 py-2 text-sm text-foreground hover:bg-accent hover:text-accent-foreground"
                 >
                   <Settings className="h-4 w-4" />
-                  Settings
+                  {t("nav.settings")}
                 </button>
                 <button
                   onClick={(e) => {
@@ -112,7 +115,7 @@ export function AppNavbar() {
                   className="flex items-center gap-2 w-full px-4 py-2 text-sm text-destructive hover:bg-destructive/10"
                 >
                   <LogOut className="h-4 w-4" />
-                  Sign out
+                  {t("nav.signOut")}
                 </button>
               </div>
             </div>
@@ -126,12 +129,12 @@ export function AppNavbar() {
         <Link href="/login">
           <Button variant="ghost" size="sm">
             <LogIn className="h-4 w-4 mr-2" />
-            Sign in
+            {t("nav.signIn")}
           </Button>
         </Link>
         <Link href="/signup">
           <Button size="sm">
-            Sign up
+            {t("nav.signUp")}
           </Button>
         </Link>
       </div>
@@ -176,7 +179,7 @@ export function AppNavbar() {
                   className="flex items-center gap-2 w-full px-4 py-2 text-sm text-foreground hover:bg-accent hover:text-accent-foreground"
                 >
                   <User className="h-4 w-4" />
-                  Profile
+                  {t("nav.profile")}
                 </Link>
                 <button
                   onClick={() => {
@@ -186,7 +189,7 @@ export function AppNavbar() {
                   className="flex items-center gap-2 w-full px-4 py-2 text-sm text-foreground hover:bg-accent hover:text-accent-foreground"
                 >
                   <Settings className="h-4 w-4" />
-                  Settings
+                  {t("nav.settings")}
                 </button>
                 <button
                   onClick={(e) => {
@@ -197,7 +200,7 @@ export function AppNavbar() {
                   className="flex items-center gap-2 w-full px-4 py-2 text-sm text-destructive hover:bg-destructive/10"
                 >
                   <LogOut className="h-4 w-4" />
-                  Sign out
+                  {t("nav.signOut")}
                 </button>
               </div>
             </div>
@@ -262,12 +265,12 @@ export function AppNavbar() {
         <Link href="/login" onClick={() => setIsOpen(false)}>
           <Button variant="outline" className="w-full justify-start">
             <LogIn className="h-4 w-4 mr-2" />
-            Sign in
+            {t("nav.signIn")}
           </Button>
         </Link>
         <Link href="/signup" onClick={() => setIsOpen(false)}>
           <Button className="w-full justify-start">
-            Sign up
+            {t("nav.signUp")}
           </Button>
         </Link>
       </div>
@@ -344,21 +347,26 @@ export function AppNavbar() {
 
         {/* User Profile Section or Login Button */}
         <div className="hidden lg:flex items-center gap-3 ml-auto">
+          <LanguageToggle />
           {renderUserSection()}
         </div>
 
         {/* Status Indicator for medium screens */}
         <div className="hidden md:flex lg:hidden items-center gap-2 ml-auto">
+          <LanguageToggle />
           {renderMediumScreenUserSection()}
         </div>
 
         {/* Mobile Menu */}
-        <div className="md:hidden ml-auto">
+        <div className="md:hidden flex items-center gap-2 ml-auto">
+          <LanguageToggle />
+        </div>
+        <div className="md:hidden">
           <Sheet open={isOpen} onOpenChange={setIsOpen}>
             <SheetTrigger asChild>
               <Button variant="ghost" size="sm">
                 <Menu className="h-5 w-5" />
-                <span className="sr-only">Toggle menu</span>
+                <span className="sr-only">{t("nav.toggleMenu")}</span>
               </Button>
             </SheetTrigger>
             <SheetContent side="right" className="w-80">
@@ -372,7 +380,7 @@ export function AppNavbar() {
                   </div>
                   <div>
                     <h1 className="text-xl font-bold">Tara</h1>
-                    <p className="text-sm text-muted-foreground">AI Learning Assistant</p>
+                    <p className="text-sm text-muted-foreground">{t("nav.aiLearningAssistant")}</p>
                   </div>
                 </div>
 
@@ -403,14 +411,14 @@ export function AppNavbar() {
                       className="flex items-center gap-3 px-4 py-3 rounded-md text-base font-medium transition-colors hover:bg-accent hover:text-accent-foreground text-muted-foreground"
                     >
                       <LogOut className="h-5 w-5" />
-                      Sign out
+                      {t("nav.signOut")}
                     </button>
                   )}
                 </div>
 
                 <div className="mt-auto pt-6 border-t">
                   <div className="rounded-lg bg-muted p-4">
-                    <p className="text-sm font-medium">Connected Integrations</p>
+                    <p className="text-sm font-medium">{t("nav.connectedIntegrations")}</p>
                     <div className="mt-2 flex gap-2">
                       <div className="h-2 w-2 rounded-full bg-green-500"></div>
                       <span className="text-xs text-muted-foreground">GitHub, Drive, Confluence</span>

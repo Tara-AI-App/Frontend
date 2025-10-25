@@ -12,6 +12,8 @@ import { CourseChatbot } from "@/components/course-chatbot"
 import { QuizComponent } from "@/components/quiz-component"
 import { apiService, CourseDetail } from "@/lib/api"
 import { useAuth } from "@/contexts/AuthContext"
+import { useLocale } from "@/contexts/LocaleContext"
+import { translateCourse } from "@/lib/translation-service"
 
 interface CourseDetailPageProps {
   readonly courseId: string
@@ -20,8 +22,11 @@ interface CourseDetailPageProps {
 export function CourseDetailPage({ courseId }: CourseDetailPageProps) {
   const router = useRouter()
   const { isAuthenticated, isLoading: authLoading } = useAuth()
+  const { locale, t } = useLocale()
+  const [originalCourse, setOriginalCourse] = useState<CourseDetail | null>(null)
   const [course, setCourse] = useState<CourseDetail | null>(null)
   const [loading, setLoading] = useState(true)
+  const [translating, setTranslating] = useState(false)
   const [error, setError] = useState<string | null>(null)
   const [selectedModule, setSelectedModule] = useState(0)
   const [selectedLesson, setSelectedLesson] = useState<number | null>(null)
@@ -52,8 +57,9 @@ export function CourseDetailPage({ courseId }: CourseDetailPageProps) {
       try {
         setLoading(true)
         setError(null)
-        
+
         const courseData = await apiService.getCourseById(courseId)
+        setOriginalCourse(courseData)
         setCourse(courseData)
       } catch (err) {
         console.error("Failed to fetch course:", err)
@@ -65,6 +71,27 @@ export function CourseDetailPage({ courseId }: CourseDetailPageProps) {
 
     fetchCourse()
   }, [courseId, isAuthenticated, authLoading])
+
+  // Auto-translate when locale changes
+  useEffect(() => {
+    if (!originalCourse || translating) return
+
+    const translateCourseContent = async () => {
+      try {
+        setTranslating(true)
+        const translatedCourse = await translateCourse(originalCourse, locale)
+        setCourse(translatedCourse)
+      } catch (err) {
+        console.error("Failed to translate course:", err)
+        // If translation fails, fall back to original
+        setCourse(originalCourse)
+      } finally {
+        setTranslating(false)
+      }
+    }
+
+    translateCourseContent()
+  }, [locale, originalCourse])
 
   const formatDuration = (hours?: number) => {
     if (!hours) return "Duration not specified"
@@ -97,9 +124,9 @@ export function CourseDetailPage({ courseId }: CourseDetailPageProps) {
 
   const getStatusBadge = (course: CourseDetail) => {
     if (course.is_completed) {
-      return <Badge variant="default" className="bg-green-100 text-green-800">Completed</Badge>
+      return <Badge variant="default" className="bg-green-100 text-green-800">{t("course.completed")}</Badge>
     } else if (course.progress > 0) {
-      return <Badge variant="secondary">In Progress</Badge>
+      return <Badge variant="secondary">{t("course.inProgress")}</Badge>
     } else {
       return null
     }

@@ -153,6 +153,38 @@ export function CourseDetailPage({ courseId }: CourseDetailPageProps) {
     return match ? match[1] : (fallbackIndex + 1).toString()
   }
 
+  const renderSourceLinks = (sources: string[] | undefined) => {
+    if (!sources || sources.length === 0) {
+      return <span className="font-medium text-right max-w-[60%] break-words">Internal Docs</span>
+    }
+
+    return (
+      <div className="font-medium text-right max-w-[60%] break-words space-y-1">
+        {sources.map((source, index) => {
+          // Check if the source is a URL
+          const isUrl = source.startsWith('http://') || source.startsWith('https://')
+
+          if (isUrl) {
+            return (
+              <div key={index}>
+                <a
+                  href={source}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="text-blue-600 hover:text-blue-800 hover:underline"
+                >
+                  {source.length > 50 ? `${source.substring(0, 47)}...` : source}
+                </a>
+              </div>
+            )
+          } else {
+            return <div key={index}>{source}</div>
+          }
+        })}
+      </div>
+    )
+  }
+
   const handleLessonClick = (moduleIndex: number, lessonIndex: number) => {
     setSelectedModule(moduleIndex)
     setSelectedLesson(lessonIndex)
@@ -904,11 +936,7 @@ export function CourseDetailPage({ courseId }: CourseDetailPageProps) {
                 </div>
                 <div className="flex justify-between text-sm">
                   <span className="text-gray-600">Generated From:</span>
-                  <span className="font-medium text-right max-w-[60%] break-words">
-                    {course.source_from && course.source_from.length > 0 
-                      ? course.source_from.join(', ') 
-                      : 'Internal Docs'}
-                  </span>
+                  {renderSourceLinks(course.source_from)}
                 </div>
               </CardContent>
             </Card>

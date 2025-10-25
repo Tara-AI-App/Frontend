@@ -83,5 +83,26 @@
     "startCourse": "Start Course",
     "resumeCourse": "Resume Course",
     "viewCourse": "View Course"
+  },
+  "guide": {
+    "guide": "Guide",
+    "loadingGuide": "Loading guide...",
+    "errorLoadingGuide": "Error Loading Guide",
+    "guideNotFound": "Guide Not Found",
+    "guideNotFoundMessage": "The requested guide could not be found.",
+    "back": "Back",
+    "goBack": "Go Back",
+    "guideInfo": "Guide Info",
+    "created": "Created",
+    "lastUpdated": "Last Updated",
+    "generatedFrom": "Generated From:",
+    "sources": "sources",
+    "justNow": "Just now",
+    "hourAgo": "hour ago",
+    "hoursAgo": "hours ago",
+    "dayAgo": "day ago",
+    "daysAgo": "days ago",
+    "weekAgo": "week ago",
+    "weeksAgo": "weeks ago"
   }
 }

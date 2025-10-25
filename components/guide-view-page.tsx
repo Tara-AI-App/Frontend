@@ -11,6 +11,8 @@ import { Alert, AlertDescription } from "@/components/ui/alert"
 import { MarkdownRenderer } from "@/components/markdown-renderer"
 import { CourseChatbot } from "@/components/course-chatbot"
 import { apiService, GuideDetailResponse } from "@/lib/api"
+import { useLocale } from "@/contexts/LocaleContext"
+import { translateGuide } from "@/lib/translation-service"
 
 interface GuideViewPageProps {
   guideId: string
@@ -19,16 +21,21 @@ interface GuideViewPageProps {
 function GuideViewContent({ guideId }: GuideViewPageProps) {
   const searchParams = useSearchParams()
   const router = useRouter()
+  const { t, locale } = useLocale()
+  const [originalGuide, setOriginalGuide] = useState<GuideDetailResponse | null>(null)
   const [guideData, setGuideData] = useState<GuideDetailResponse | null>(null)
   const [loading, setLoading] = useState(true)
+  const [translating, setTranslating] = useState(false)
   const [error, setError] = useState<string | null>(null)
 
+  // Fetch guide data
   useEffect(() => {
     const fetchGuide = async () => {
       try {
         setLoading(true)
         setError(null)
         const guide = await apiService.getGuideById(guideId)
+        setOriginalGuide(guide)
         setGuideData(guide)
       } catch (err) {
         console.error('Error fetching guide:', err)
@@ -43,12 +50,33 @@ function GuideViewContent({ guideId }: GuideViewPageProps) {
     }
   }, [guideId])
 
+  // Translate guide when locale changes
+  useEffect(() => {
+    const translateGuideContent = async () => {
+      if (!originalGuide) return
+
+      try {
+        setTranslating(true)
+        const translated = await translateGuide(originalGuide, locale as 'id' | 'en')
+        setGuideData(translated)
+      } catch (err) {
+        console.error('Error translating guide:', err)
+        // Fall back to original guide if translation fails
+        setGuideData(originalGuide)
+      } finally {
+        setTranslating(false)
+      }
+    }
+
+    translateGuideContent()
+  }, [locale, originalGuide])
+
   if (loading) {
     return (
       <div className="min-h-[calc(100vh-4rem)] flex items-center justify-center">
         <div className="text-center">
           <Loader2 className="h-8 w-8 text-primary mx-auto mb-4 animate-spin" />
-          <p>Loading guide...</p>
+          <p>{t("guide.loadingGuide")}</p>
         </div>
       </div>
     )
@@ -59,11 +87,11 @@ function GuideViewContent({ guideId }: GuideViewPageProps) {
       <div className="min-h-[calc(100vh-4rem)] flex items-center justify-center">
         <div className="text-center">
           <AlertCircle className="h-8 w-8 text-destructive mx-auto mb-4" />
-          <h2 className="text-xl font-semibold mb-2">Error Loading Guide</h2>
+          <h2 className="text-xl font-semibold mb-2">{t("guide.errorLoadingGuide")}</h2>
           <p className="text-muted-foreground mb-4">{error}</p>
           <Button onClick={() => router.back()}>
             <ArrowLeft className="h-4 w-4 mr-2" />
-            Go Back
+            {t("guide.goBack")}
           </Button>
         </div>
       </div>
@@ -75,11 +103,11 @@ function GuideViewContent({ guideId }: GuideViewPageProps) {
       <div className="min-h-[calc(100vh-4rem)] flex items-center justify-center">
         <div className="text-center">
           <FileText className="h-8 w-8 text-muted-foreground mx-auto mb-4" />
-          <h2 className="text-xl font-semibold mb-2">Guide Not Found</h2>
-          <p className="text-muted-foreground mb-4">The requested guide could not be found.</p>
+          <h2 className="text-xl font-semibold mb-2">{t("guide.guideNotFound")}</h2>
+          <p className="text-muted-foreground mb-4">{t("guide.guideNotFoundMessage")}</p>
           <Button onClick={() => router.back()}>
             <ArrowLeft className="h-4 w-4 mr-2" />
-            Go Back
+            {t("guide.goBack")}
           </Button>
         </div>
       </div>
@@ -88,7 +116,7 @@ function GuideViewContent({ guideId }: GuideViewPageProps) {
 
   const formatDate = (dateString: string) => {
     const date = new Date(dateString)
-    return date.toLocaleDateString('en-US', {
+    return date.toLocaleDateString(locale === 'id' ? 'id-ID' : 'en-US', {
       year: 'numeric',
       month: 'short',
       day: 'numeric',
@@ -101,16 +129,22 @@ function GuideViewContent({ guideId }: GuideViewPageProps) {
     const date = new Date(dateString)
     const now = new Date()
     const diffInHours = Math.floor((now.getTime() - date.getTime()) / (1000 * 60 * 60))
-    
-    if (diffInHours < 1) return 'Just now'
-    if (diffInHours < 24) return `${diffInHours} hour${diffInHours > 1 ? 's' : ''} ago`
-    
+
+    if (diffInHours < 1) return t("guide.justNow")
+    if (diffInHours < 24) {
+      return `${diffInHours} ${diffInHours > 1 ? t("guide.hoursAgo") : t("guide.hourAgo")}`
+    }
+
     const diffInDays = Math.floor(diffInHours / 24)
-    if (diffInDays < 7) return `${diffInDays} day${diffInDays > 1 ? 's' : ''} ago`
-    
+    if (diffInDays < 7) {
+      return `${diffInDays} ${diffInDays > 1 ? t("guide.daysAgo") : t("guide.dayAgo")}`
+    }
+
     const diffInWeeks = Math.floor(diffInDays / 7)
-    if (diffInWeeks < 4) return `${diffInWeeks} week${diffInWeeks > 1 ? 's' : ''} ago`
-    
+    if (diffInWeeks < 4) {
+      return `${diffInWeeks} ${diffInWeeks > 1 ? t("guide.weeksAgo") : t("guide.weekAgo")}`
+    }
+
     return formatDate(dateString)
   }
 
@@ -120,11 +154,11 @@ function GuideViewContent({ guideId }: GuideViewPageProps) {
         <div className="flex items-center gap-2 md:gap-4">
           <Button variant="ghost" size="sm" onClick={() => router.back()}>
             <ArrowLeft className="h-4 w-4 mr-2" />
-            Back
+            {t("guide.back")}
           </Button>
           <div className="flex items-center gap-2">
             <FileText className="h-5 w-5 text-primary" />
-            <h1 className="text-lg md:text-xl font-semibold">Guide</h1>
+            <h1 className="text-lg md:text-xl font-semibold">{t("guide.guide")}</h1>
           </div>
         </div>
       </div>
@@ -149,10 +183,10 @@ function GuideViewContent({ guideId }: GuideViewPageProps) {
                 </div>
                 <div className="flex items-center gap-1">
                   <FileText className="h-4 w-4" />
-                  Guide
+                  {t("guide.guide")}
                 </div>
                 {guideData.source_from && guideData.source_from.length > 0 && (
-                  <Badge variant="secondary">{guideData.source_from.length} sources</Badge>
+                  <Badge variant="secondary">{guideData.source_from.length} {t("guide.sources")}</Badge>
                 )}
               </div>
 
@@ -163,7 +197,13 @@ function GuideViewContent({ guideId }: GuideViewPageProps) {
             {/* Guide Content */}
             <div className="space-y-6">
               <Card className="overflow-hidden hover:shadow-md transition-shadow">
-                <CardContent className="p-6">
+                <CardContent className="p-6 relative">
+                  {translating && (
+                    <div className="absolute top-2 right-2 flex items-center gap-2 text-xs text-muted-foreground bg-background/80 backdrop-blur px-2 py-1 rounded-md">
+                      <Loader2 className="h-3 w-3 animate-spin" />
+                      <span>{t("common.loading")}</span>
+                    </div>
+                  )}
                   <MarkdownRenderer content={guideData.content} />
                   </CardContent>
                 </Card>
@@ -176,28 +216,43 @@ function GuideViewContent({ guideId }: GuideViewPageProps) {
           <div className="space-y-6">
             <Card>
               <CardHeader>
-                <CardTitle className="text-lg">Guide Info</CardTitle>
+                <CardTitle className="text-lg">{t("guide.guideInfo")}</CardTitle>
               </CardHeader>
               <CardContent className="space-y-3">
                 <div className="flex justify-between text-sm">
-                  <span>Created</span>
+                  <span>{t("guide.created")}</span>
                   <span className="text-muted-foreground">{formatDate(guideData.created_at)}</span>
                 </div>
                 <div className="flex justify-between text-sm">
-                  <span>Last Updated</span>
+                  <span>{t("guide.lastUpdated")}</span>
                   <span className="text-muted-foreground">{formatDate(guideData.updated_at)}</span>
                 </div>
                 {guideData.source_from && guideData.source_from.length > 0 && (
-                  <div className="space-y-2">
-                    <span className="text-sm font-medium">Generated From:</span>
-                    <div className="space-y-1">
-                      {guideData.source_from.map((source, index) => (
-                        <Badge key={index} variant="secondary" className="text-xs">
-                          {source}
-                        </Badge>
-                      ))}
+                  <div className="flex justify-between text-sm">
+                    <span>{t("guide.generatedFrom")}</span>
+                    <div className="font-medium text-right max-w-[60%] break-words space-y-1">
+                      {guideData.source_from.map((source, index) => {
+                        const isUrl = source.startsWith('http://') || source.startsWith('https://')
+
+                        if (isUrl) {
+                          return (
+                            <div key={index}>
+                              <a
+                                href={source}
+                                target="_blank"
+                                rel="noopener noreferrer"
+                                className="text-blue-600 hover:text-blue-800 hover:underline"
+                              >
+                                {source.length > 50 ? `${source.substring(0, 47)}...` : source}
+                              </a>
+                            </div>
+                          )
+                        } else {
+                          return <div key={index}>{source}</div>
+                        }
+                      })}
                     </div>
-                </div>
+                  </div>
                 )}
               </CardContent>
             </Card>
@@ -216,11 +271,13 @@ function GuideViewContent({ guideId }: GuideViewPageProps) {
 }
 
 function GuideViewFallback() {
+  const { t } = useLocale()
+
   return (
     <div className="min-h-[calc(100vh-4rem)] flex items-center justify-center">
       <div className="text-center">
         <FileText className="h-8 w-8 text-primary mx-auto mb-4" />
-        <p>Loading guide...</p>
+        <p>{t("guide.loadingGuide")}</p>
       </div>
     </div>
   )

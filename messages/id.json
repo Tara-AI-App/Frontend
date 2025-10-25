@@ -83,5 +83,26 @@
     "startCourse": "Mulai Kursus",
     "resumeCourse": "Lanjutkan Kursus",
     "viewCourse": "Lihat Kursus"
+  },
+  "guide": {
+    "guide": "Panduan",
+    "loadingGuide": "Memuat panduan...",
+    "errorLoadingGuide": "Gagal Memuat Panduan",
+    "guideNotFound": "Panduan Tidak Ditemukan",
+    "guideNotFoundMessage": "Panduan yang diminta tidak dapat ditemukan.",
+    "back": "Kembali",
+    "goBack": "Kembali",
+    "guideInfo": "Info Panduan",
+    "created": "Dibuat",
+    "lastUpdated": "Terakhir Diperbarui",
+    "generatedFrom": "Dibuat Dari:",
+    "sources": "sumber",
+    "justNow": "Baru saja",
+    "hourAgo": "jam yang lalu",
+    "hoursAgo": "jam yang lalu",
+    "dayAgo": "hari yang lalu",
+    "daysAgo": "hari yang lalu",
+    "weekAgo": "minggu yang lalu",
+    "weeksAgo": "minggu yang lalu"
   }
 }

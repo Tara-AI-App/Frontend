@@ -4,7 +4,7 @@
  * from English to Indonesian using client-side caching
  */
 
-import { CourseDetail, LessonDetail, QuizDetail, ModuleDetail } from './api'
+import { CourseDetail, LessonDetail, QuizDetail, ModuleDetail, GuideDetailResponse } from './api'
 
 // Simple in-memory cache for translations
 const translationCache = new Map<string, string>()
@@ -201,6 +201,35 @@ export async function translateCourse(
     description: translatedDescription,
     learning_objectives: translatedObjectives,
     modules: translatedModules,
+  }
+}
+
+/**
+ * Translate guide content
+ */
+export async function translateGuide(
+  guide: GuideDetailResponse,
+  targetLang: 'id' | 'en'
+): Promise<GuideDetailResponse> {
+  if (targetLang === 'en') {
+    return guide
+  }
+
+  const [
+    translatedTitle,
+    translatedDescription,
+    translatedContent
+  ] = await Promise.all([
+    translateText(guide.title, targetLang),
+    guide.description ? translateText(guide.description, targetLang) : Promise.resolve(undefined),
+    translateText(guide.content, targetLang),
+  ])
+
+  return {
+    ...guide,
+    title: translatedTitle,
+    description: translatedDescription,
+    content: translatedContent,
   }
 }
 
